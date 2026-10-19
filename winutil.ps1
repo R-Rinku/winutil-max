@@ -7676,6 +7676,62 @@ function Clear-WinUtilActiveJob {
     }
 }
 
+function Start-WinUtilStandardProcess {
+    <#
+    .SYNOPSIS
+        Launches an interactive process strictly under the standard (non-elevated) desktop user token.
+    .DESCRIPTION
+        From an elevated administrator session, standard Start-Process or Shell.Application creates
+        child processes that inherit the administrator token. This function queries the ShellWindows
+        desktop COM interface (IShellDispatch2 on explorer.exe) to spawn child processes strictly
+        under the interactive user's medium integrity token (IsInRole(Administrator) = False).
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+
+        [string]$Arguments = "",
+
+        [string]$WorkingDirectory = $env:USERPROFILE
+    )
+
+    # Method 1: Desktop ShellWindows COM dispatch (Guaranteed Medium Integrity / Non-Admin)
+    try {
+        $type = [Type]::GetTypeFromCLSID([Guid]'{9BA05972-F6A8-11CF-A442-00A0C90A8F39}')
+        $sw = [Activator]::CreateInstance($type)
+        $loc = [int]0; $root = [int]0; $hwnd = [int]0
+        $disp = $sw.FindWindowSW([ref]$loc, [ref]$root, 8, [ref]$hwnd, 1)
+        if ($null -ne $disp -and $null -ne $disp.Document -and $null -ne $disp.Document.Application) {
+            $disp.Document.Application.ShellExecute($FilePath, $Arguments, $WorkingDirectory, "open", 1)
+            Write-WinUtilLog -Component "Process" -Message "Launched $FilePath via ShellWindows desktop dispatch (non-elevated)."
+            return $true
+        }
+    } catch {
+        Write-WinUtilLog -Component "Process" -Message "Desktop dispatch failed: $($_.Exception.Message)" -Level "WARN"
+    }
+
+    # Method 2: In-Process Shell.Application COM fallback
+    try {
+        $sh = New-Object -ComObject Shell.Application
+        $sh.ShellExecute($FilePath, $Arguments, $WorkingDirectory, "open", 1)
+        Write-WinUtilLog -Component "Process" -Message "Launched $FilePath via Shell.Application fallback."
+        return $true
+    } catch {
+        Write-WinUtilLog -Component "Process" -Message "Shell.Application fallback failed: $($_.Exception.Message)" -Level "WARN"
+    }
+
+    # Method 3: Direct Start-Process fallback
+    try {
+        Start-Process -FilePath $FilePath -ArgumentList $Arguments -WorkingDirectory $WorkingDirectory
+        Write-WinUtilLog -Component "Process" -Message "Launched $FilePath via Start-Process fallback."
+        return $true
+    } catch {
+        Write-WinUtilLog -Component "Process" -Message "Start-Process fallback failed: $($_.Exception.Message)" -Level "ERROR"
+        return $false
+    }
+}
+
 function Start-WinUtilTabWarmup {
     <#
         .SYNOPSIS
@@ -9562,13 +9618,13 @@ function Invoke-WPFOpenStandardShell {
     Write-WinUtilLog -Component "Activation" -Message "Opening standard user PowerShell terminal."
     Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Opening standard user PowerShell terminal..." -ForegroundColor Cyan
 
-    try {
-        $shell = New-Object -ComObject Shell.Application
-        $shell.ShellExecute("powershell.exe", "-NoExit", $env:USERPROFILE, "open", 1)
+    $success = Start-WinUtilStandardProcess -FilePath "powershell.exe" -Arguments "-NoExit"
+    if ($success) {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Standard user PowerShell terminal opened." -ForegroundColor Green
         Write-WinUtilLog -Component "Activation" -Message "Standard PowerShell opened."
-    } catch {
-        Start-Process powershell.exe -WorkingDirectory $env:USERPROFILE
+    } else {
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to open standard terminal." -ForegroundColor Red
+        Write-WinUtilLog -Component "Activation" -Message "Failed to open standard terminal." -Level "ERROR"
     }
 }
 
@@ -9590,30 +9646,22 @@ function Invoke-WPFActivationMAS {
     Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Launching MAS in standard user shell..." -ForegroundColor Cyan
 
     try {
-        # Copy command to clipboard first so user has it immediately if window closes or gets blocked
-        $cmd = "irm https://massgrave.dev/get | iex"
-        Set-Clipboard -Value "irm https://get.activated.win | iex"
+        $cmd = "irm https://get.activated.win | iex"
+        Set-Clipboard -Value $cmd
 
         $arg = "-NoExit -Command `"Write-Host '=========================================' -ForegroundColor Cyan; " +
                "Write-Host '  Microsoft Activation Scripts (MAS)' -ForegroundColor Green; " +
                "Write-Host '  Running in Standard User Shell' -ForegroundColor Gray; " +
                "Write-Host '=========================================`n' -ForegroundColor Cyan; " +
-               "irm https://massgrave.dev/get | iex`""
+               "irm https://get.activated.win | iex`""
 
-        # Launch strictly in standard (unelevated) shell via Shell.Application
-        try {
-            $shell = New-Object -ComObject Shell.Application
-            $shell.ShellExecute("powershell.exe", $arg, $env:USERPROFILE, "open", 1)
-        } catch {
-            $psi = New-Object System.Diagnostics.ProcessStartInfo
-            $psi.FileName = "powershell.exe"
-            $psi.Arguments = $arg
-            $psi.UseShellExecute = $true
-            [System.Diagnostics.Process]::Start($psi) | Out-Null
+        $success = Start-WinUtilStandardProcess -FilePath "powershell.exe" -Arguments $arg
+        if ($success) {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] MAS interactive window launched in standard shell (command also copied to clipboard)." -ForegroundColor Green
+            Write-WinUtilLog -Component "Activation" -Message "MAS launched successfully in standard shell."
+        } else {
+            throw "Could not launch standard process."
         }
-
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] MAS interactive window launched in standard shell (command also copied to clipboard)." -ForegroundColor Green
-        Write-WinUtilLog -Component "Activation" -Message "MAS launched successfully in standard shell."
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to launch MAS: $($_.Exception.Message)" -ForegroundColor Red
         Write-WinUtilLog -Component "Activation" -Message "Failed to launch MAS: $($_.Exception.Message)" -Level "ERROR"
@@ -11587,20 +11635,13 @@ function Invoke-WPFSpicetifyInstall {
 
         $arg = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
 
-        # Launch in standard unelevated shell via Shell.Application
-        try {
-            $shell = New-Object -ComObject Shell.Application
-            $shell.ShellExecute("powershell.exe", $arg, $env:USERPROFILE, "open", 1)
-        } catch {
-            $psi = New-Object System.Diagnostics.ProcessStartInfo
-            $psi.FileName = "powershell.exe"
-            $psi.Arguments = $arg
-            $psi.UseShellExecute = $true
-            [System.Diagnostics.Process]::Start($psi) | Out-Null
+        $success = Start-WinUtilStandardProcess -FilePath "powershell.exe" -Arguments $arg
+        if ($success) {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify installer launched in standard user shell." -ForegroundColor Green
+            Write-WinUtilLog -Component "Activation" -Message "Spicetify installer launched successfully in standard shell."
+        } else {
+            throw "Could not launch standard process."
         }
-
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify installer launched in standard user shell." -ForegroundColor Green
-        Write-WinUtilLog -Component "Activation" -Message "Spicetify installer launched successfully in standard shell."
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to start Spicetify installer: $($_.Exception.Message)" -ForegroundColor Red
         Write-WinUtilLog -Component "Activation" -Message "Failed to start Spicetify installer: $($_.Exception.Message)" -Level "ERROR"
@@ -11629,20 +11670,13 @@ function Invoke-WPFSpicetifyMarketplace {
 
         $arg = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
 
-        # Launch in standard unelevated shell via Shell.Application
-        try {
-            $shell = New-Object -ComObject Shell.Application
-            $shell.ShellExecute("powershell.exe", $arg, $env:USERPROFILE, "open", 1)
-        } catch {
-            $psi = New-Object System.Diagnostics.ProcessStartInfo
-            $psi.FileName = "powershell.exe"
-            $psi.Arguments = $arg
-            $psi.UseShellExecute = $true
-            [System.Diagnostics.Process]::Start($psi) | Out-Null
+        $success = Start-WinUtilStandardProcess -FilePath "powershell.exe" -Arguments $arg
+        if ($success) {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify Marketplace installer launched in standard user shell." -ForegroundColor Green
+            Write-WinUtilLog -Component "Activation" -Message "Spicetify Marketplace installer launched in standard shell."
+        } else {
+            throw "Could not launch standard process."
         }
-
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify Marketplace installer launched in standard user shell." -ForegroundColor Green
-        Write-WinUtilLog -Component "Activation" -Message "Spicetify Marketplace installer launched in standard shell."
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to start Spicetify Marketplace installer: $($_.Exception.Message)" -ForegroundColor Red
         Write-WinUtilLog -Component "Activation" -Message "Failed to start Marketplace: $($_.Exception.Message)" -Level "ERROR"
@@ -19801,7 +19835,7 @@ $inputXML = @'
                                                    FontSize="14"
                                                    FontWeight="Bold"
                                                    Foreground="#0078D4"/>
-                                        <TextBlock Text="massgrave.dev • Windows &amp; Office HWID / Ohook activation"
+                                        <TextBlock Text="massgrave.dev - Windows &amp; Office HWID / Ohook activation"
                                                    FontSize="11"
                                                    Foreground="{DynamicResource LinkForegroundColor}"
                                                    Margin="0,1,0,0"/>
@@ -19890,7 +19924,7 @@ $inputXML = @'
                                                    FontSize="14"
                                                    FontWeight="Bold"
                                                    Foreground="#1DB954"/>
-                                        <TextBlock Text="spicetify.app • Spotify Desktop themes, extensions &amp; ad-free"
+                                        <TextBlock Text="spicetify.app - Spotify Desktop themes, extensions &amp; ad-free"
                                                    FontSize="11"
                                                    Foreground="#1DB954"
                                                    Margin="0,1,0,0"/>
@@ -19918,9 +19952,9 @@ $inputXML = @'
                                                 Padding="6,4"
                                                 Margin="0,0,4,0">
                                             <TextBlock Text="iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex"
-                                                       FontSize="11"
+                                                       FontSize="10"
                                                        FontFamily="Consolas"
-                                                       TextTrimming="CharacterEllipsis"
+                                                       TextWrapping="Wrap"
                                                        VerticalAlignment="Center"
                                                        Foreground="{DynamicResource MainForegroundColor}"/>
                                         </Border>

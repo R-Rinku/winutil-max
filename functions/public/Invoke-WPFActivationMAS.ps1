@@ -31,13 +31,13 @@ function Invoke-WPFOpenStandardShell {
     Write-WinUtilLog -Component "Activation" -Message "Opening standard user PowerShell terminal."
     Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Opening standard user PowerShell terminal..." -ForegroundColor Cyan
 
-    try {
-        $shell = New-Object -ComObject Shell.Application
-        $shell.ShellExecute("powershell.exe", "-NoExit", $env:USERPROFILE, "open", 1)
+    $success = Start-WinUtilStandardProcess -FilePath "powershell.exe" -Arguments "-NoExit"
+    if ($success) {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Standard user PowerShell terminal opened." -ForegroundColor Green
         Write-WinUtilLog -Component "Activation" -Message "Standard PowerShell opened."
-    } catch {
-        Start-Process powershell.exe -WorkingDirectory $env:USERPROFILE
+    } else {
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to open standard terminal." -ForegroundColor Red
+        Write-WinUtilLog -Component "Activation" -Message "Failed to open standard terminal." -Level "ERROR"
     }
 }
 
@@ -59,30 +59,22 @@ function Invoke-WPFActivationMAS {
     Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Launching MAS in standard user shell..." -ForegroundColor Cyan
 
     try {
-        # Copy command to clipboard first so user has it immediately if window closes or gets blocked
-        $cmd = "irm https://massgrave.dev/get | iex"
-        Set-Clipboard -Value "irm https://get.activated.win | iex"
+        $cmd = "irm https://get.activated.win | iex"
+        Set-Clipboard -Value $cmd
 
         $arg = "-NoExit -Command `"Write-Host '=========================================' -ForegroundColor Cyan; " +
                "Write-Host '  Microsoft Activation Scripts (MAS)' -ForegroundColor Green; " +
                "Write-Host '  Running in Standard User Shell' -ForegroundColor Gray; " +
                "Write-Host '=========================================`n' -ForegroundColor Cyan; " +
-               "irm https://massgrave.dev/get | iex`""
+               "irm https://get.activated.win | iex`""
 
-        # Launch strictly in standard (unelevated) shell via Shell.Application
-        try {
-            $shell = New-Object -ComObject Shell.Application
-            $shell.ShellExecute("powershell.exe", $arg, $env:USERPROFILE, "open", 1)
-        } catch {
-            $psi = New-Object System.Diagnostics.ProcessStartInfo
-            $psi.FileName = "powershell.exe"
-            $psi.Arguments = $arg
-            $psi.UseShellExecute = $true
-            [System.Diagnostics.Process]::Start($psi) | Out-Null
+        $success = Start-WinUtilStandardProcess -FilePath "powershell.exe" -Arguments $arg
+        if ($success) {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] MAS interactive window launched in standard shell (command also copied to clipboard)." -ForegroundColor Green
+            Write-WinUtilLog -Component "Activation" -Message "MAS launched successfully in standard shell."
+        } else {
+            throw "Could not launch standard process."
         }
-
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] MAS interactive window launched in standard shell (command also copied to clipboard)." -ForegroundColor Green
-        Write-WinUtilLog -Component "Activation" -Message "MAS launched successfully in standard shell."
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to launch MAS: $($_.Exception.Message)" -ForegroundColor Red
         Write-WinUtilLog -Component "Activation" -Message "Failed to launch MAS: $($_.Exception.Message)" -Level "ERROR"

@@ -26,20 +26,13 @@ function Invoke-WPFSpicetifyInstall {
 
         $arg = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
 
-        # Launch in standard unelevated shell via Shell.Application
-        try {
-            $shell = New-Object -ComObject Shell.Application
-            $shell.ShellExecute("powershell.exe", $arg, $env:USERPROFILE, "open", 1)
-        } catch {
-            $psi = New-Object System.Diagnostics.ProcessStartInfo
-            $psi.FileName = "powershell.exe"
-            $psi.Arguments = $arg
-            $psi.UseShellExecute = $true
-            [System.Diagnostics.Process]::Start($psi) | Out-Null
+        $success = Start-WinUtilStandardProcess -FilePath "powershell.exe" -Arguments $arg
+        if ($success) {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify installer launched in standard user shell." -ForegroundColor Green
+            Write-WinUtilLog -Component "Activation" -Message "Spicetify installer launched successfully in standard shell."
+        } else {
+            throw "Could not launch standard process."
         }
-
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify installer launched in standard user shell." -ForegroundColor Green
-        Write-WinUtilLog -Component "Activation" -Message "Spicetify installer launched successfully in standard shell."
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to start Spicetify installer: $($_.Exception.Message)" -ForegroundColor Red
         Write-WinUtilLog -Component "Activation" -Message "Failed to start Spicetify installer: $($_.Exception.Message)" -Level "ERROR"
@@ -68,20 +61,13 @@ function Invoke-WPFSpicetifyMarketplace {
 
         $arg = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
 
-        # Launch in standard unelevated shell via Shell.Application
-        try {
-            $shell = New-Object -ComObject Shell.Application
-            $shell.ShellExecute("powershell.exe", $arg, $env:USERPROFILE, "open", 1)
-        } catch {
-            $psi = New-Object System.Diagnostics.ProcessStartInfo
-            $psi.FileName = "powershell.exe"
-            $psi.Arguments = $arg
-            $psi.UseShellExecute = $true
-            [System.Diagnostics.Process]::Start($psi) | Out-Null
+        $success = Start-WinUtilStandardProcess -FilePath "powershell.exe" -Arguments $arg
+        if ($success) {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify Marketplace installer launched in standard user shell." -ForegroundColor Green
+            Write-WinUtilLog -Component "Activation" -Message "Spicetify Marketplace installer launched in standard shell."
+        } else {
+            throw "Could not launch standard process."
         }
-
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify Marketplace installer launched in standard user shell." -ForegroundColor Green
-        Write-WinUtilLog -Component "Activation" -Message "Spicetify Marketplace installer launched in standard shell."
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to start Spicetify Marketplace installer: $($_.Exception.Message)" -ForegroundColor Red
         Write-WinUtilLog -Component "Activation" -Message "Failed to start Marketplace: $($_.Exception.Message)" -Level "ERROR"

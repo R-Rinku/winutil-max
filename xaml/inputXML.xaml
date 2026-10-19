@@ -1663,7 +1663,7 @@
                                                    FontSize="14"
                                                    FontWeight="Bold"
                                                    Foreground="#0078D4"/>
-                                        <TextBlock Text="massgrave.dev • Windows &amp; Office HWID / Ohook activation"
+                                        <TextBlock Text="massgrave.dev - Windows &amp; Office HWID / Ohook activation"
                                                    FontSize="11"
                                                    Foreground="{DynamicResource LinkForegroundColor}"
                                                    Margin="0,1,0,0"/>
@@ -1752,7 +1752,7 @@
                                                    FontSize="14"
                                                    FontWeight="Bold"
                                                    Foreground="#1DB954"/>
-                                        <TextBlock Text="spicetify.app • Spotify Desktop themes, extensions &amp; ad-free"
+                                        <TextBlock Text="spicetify.app - Spotify Desktop themes, extensions &amp; ad-free"
                                                    FontSize="11"
                                                    Foreground="#1DB954"
                                                    Margin="0,1,0,0"/>
@@ -1780,9 +1780,9 @@
                                                 Padding="6,4"
                                                 Margin="0,0,4,0">
                                             <TextBlock Text="iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex"
-                                                       FontSize="11"
+                                                       FontSize="10"
                                                        FontFamily="Consolas"
-                                                       TextTrimming="CharacterEllipsis"
+                                                       TextWrapping="Wrap"
                                                        VerticalAlignment="Center"
                                                        Foreground="{DynamicResource MainForegroundColor}"/>
                                         </Border>
