@@ -243,5 +243,14 @@ function Invoke-WPFButtonAction {
             }
         }
         "WPFselectedAppsButton" {$sync.selectedAppsPopup.IsOpen = -not $sync.selectedAppsPopup.IsOpen}
+        "WPFVecnaDismissButton" {
+            if ($null -ne $sync.WPFVecnaOverlay) {
+                if ($script:WinUtilVecnaExitHandled) {
+                    $sync.Form.Close()
+                } else {
+                    $sync.WPFVecnaOverlay.Visibility = [System.Windows.Visibility]::Collapsed
+                }
+            }
+        }
     }
 }

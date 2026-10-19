@@ -207,6 +207,13 @@ function Start-WinUtilJob {
                     # The worker is still finished, so its slot must always be released.
                     $null = Clear-WinUtilActiveJob -Token $JobToken
 
+                    # Display Vecna completion modal overlay
+                    try {
+                        if (Test-WinUtilUIAlive) {
+                            Invoke-WinUtilVecnaCompletion -JobLabel $JobLabel
+                        }
+                    } catch {}
+
                     # Auto-hide progress bar 3 seconds after job finishes so it does not linger indefinitely
                     try {
                         if (Test-WinUtilUIAlive) {

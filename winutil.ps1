@@ -1946,7 +1946,7 @@ function Initialize-InstallCategoryAppList {
         # Indexed, not dynamic member, lookup: the latter goes through the PSObject adapter and
         # costs about seventy times as much per app.
         foreach ($appKey in $Apps.Keys) {
-            if ($appKey.StartsWith("WPFInstall")) { continue }
+            if (-not $appKey.StartsWith("WPFInstall")) { continue }
             $category = $Apps[$appKey].Category
             if (-not $appsByCategory.ContainsKey($category)) {
                 $appsByCategory[$category] = [System.Collections.Generic.List[string]]::new()
@@ -5352,6 +5352,348 @@ function Invoke-WinUtilSSHServer {
     Write-Host "Add your public keys to this file -> $authorizedKeysPath"
 }
 
+function Get-WinUtilVecnaImage {
+    <#
+        .SYNOPSIS
+            Retrieves or downloads the Vecna image and returns a WPF BitmapImage.
+    #>
+    [CmdletBinding()]
+    param()
+
+    if ($null -ne $script:WinUtilVecnaBitmapImage) {
+        return $script:WinUtilVecnaBitmapImage
+    }
+
+    $candidates = @(
+        ".\Vecna.jpg",
+        (Join-Path (Get-Location).Path "Vecna.jpg"),
+        "c:\Users\Rinku\Github\Windows-Tweaks-Hub\Vecna.jpg",
+        (Join-Path $env:LOCALAPPDATA "winutil\Vecna.jpg")
+    )
+    if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+        $candidates = @(
+            (Join-Path $PSScriptRoot "Vecna.jpg"),
+            (Join-Path $PSScriptRoot "..\..\Vecna.jpg")
+        ) + $candidates
+    }
+
+    foreach ($path in $candidates) {
+        if (-not [string]::IsNullOrWhiteSpace($path) -and (Test-Path -LiteralPath $path -ErrorAction SilentlyContinue)) {
+            try {
+                $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $path).Path)
+                $ms = New-Object System.IO.MemoryStream(,$bytes)
+                $img = New-Object System.Windows.Media.Imaging.BitmapImage
+                $img.BeginInit()
+                $img.StreamSource = $ms
+                $img.CacheOption = [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+                $img.EndInit()
+                if ($img.CanFreeze) { $img.Freeze() }
+                $script:WinUtilVecnaBitmapImage = $img
+                return $img
+            } catch {
+                # Fall through to next candidate
+            }
+        }
+    }
+
+    # Attempt download from remote if running via web
+    try {
+        $cacheDir = Join-Path $env:LOCALAPPDATA "winutil"
+        if (-not (Test-Path -LiteralPath $cacheDir)) {
+            New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null
+        }
+        $cachedPath = Join-Path $cacheDir "Vecna.jpg"
+        $urls = @(
+            "https://raw.githubusercontent.com/R-Rinku/winutil-max/main/Vecna.jpg",
+            "https://rinkurapria.dev/Vecna.jpg"
+        )
+        foreach ($url in $urls) {
+            try {
+                Invoke-WebRequest -Uri $url -OutFile $cachedPath -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+                if (Test-Path -LiteralPath $cachedPath) {
+                    $bytes = [System.IO.File]::ReadAllBytes($cachedPath)
+                    $ms = New-Object System.IO.MemoryStream(,$bytes)
+                    $img = New-Object System.Windows.Media.Imaging.BitmapImage
+                    $img.BeginInit()
+                    $img.StreamSource = $ms
+                    $img.CacheOption = [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+                    $img.EndInit()
+                    if ($img.CanFreeze) { $img.Freeze() }
+                    $script:WinUtilVecnaBitmapImage = $img
+                    return $img
+                }
+            } catch {}
+        }
+    } catch {}
+
+    return $null
+}
+
+function Start-WinUtilStrangerThingsAudio {
+    <#
+        .SYNOPSIS
+            Generates and plays a themed Stranger Things horror audio effect in the background.
+    #>
+    param(
+        [Parameter()]
+        [ValidateSet("BatLaunch", "VecnaExit", "Victory")]
+        [string]$Theme = "BatLaunch"
+    )
+
+    [System.Threading.ThreadPool]::QueueUserWorkItem([System.Threading.WaitCallback]{
+        try {
+            $sampleRate = 11025
+            $durationSec = 2.0
+            if ($Theme -eq "VecnaExit") { $durationSec = 1.6 }
+            elseif ($Theme -eq "Victory") { $durationSec = 1.4 }
+
+            $totalSamples = [int]($sampleRate * $durationSec)
+            $data = New-Object byte[] $totalSamples
+
+            for ($i = 0; $i -lt $totalSamples; $i++) {
+                $t = $i / $sampleRate
+                $sampleVal = 0.0
+
+                if ($Theme -eq "BatLaunch") {
+                    # Low Stranger Things drone
+                    $drone = [math]::Sin(2 * [math]::PI * 82 * $t) * 0.4
+                    # 16Hz Demobat wing fluttering modulation
+                    $flutter = (1 + [math]::Sin(2 * [math]::PI * 16 * $t)) * 0.5
+                    # High bat screech sweep
+                    $chirp = 0.0
+                    if ($t -ge 0.3 -and $t -le 1.4) {
+                        $chirpTime = $t - 0.3
+                        $freq = 1500 - ($chirpTime * 650)
+                        $chirp = [math]::Sin(2 * [math]::PI * $freq * $t) * 0.32 * [math]::Sin([math]::PI * ($chirpTime / 1.1))
+                    }
+                    $env = 1.0
+                    if ($t -lt 0.2) { $env = $t / 0.2 }
+                    elseif ($t -gt 1.6) { $env = [math]::Max(0.0, (2.0 - $t) / 0.4) }
+                    $sampleVal = (($drone * $flutter) + $chirp) * $env
+                }
+                elseif ($Theme -eq "VecnaExit") {
+                    # Deep ominous sub-bass drone with slow warble
+                    $sub = [math]::Sin(2 * [math]::PI * 55 * $t) * 0.6
+                    $pulse = (1 + [math]::Sin(2 * [math]::PI * 4 * $t)) * 0.5
+                    $clockChime = [math]::Sin(2 * [math]::PI * 110 * $t) * 0.3 * [math]::Exp(-2.5 * $t)
+                    $env = 1.0
+                    if ($t -gt 1.2) { $env = [math]::Max(0.0, (1.6 - $t) / 0.4) }
+                    $sampleVal = (($sub * $pulse) + $clockChime) * $env
+                }
+                else {
+                    # Victory synth arpeggio
+                    $step = [int]($t * 8) % 4
+                    $freqs = @(261.63, 329.63, 392.00, 493.88) # C4, E4, G4, B4 (Stranger Things synth arpeggio)
+                    $freq = $freqs[$step]
+                    $env = [math]::Max(0.0, 1.0 - ($t / 1.4))
+                    $sampleVal = [math]::Sin(2 * [math]::PI * $freq * $t) * 0.45 * $env
+                }
+
+                $sampleVal = [math]::Max(-1.0, [math]::Min(1.0, $sampleVal))
+                $data[$i] = [byte]([math]::Round(($sampleVal * 120) + 128))
+            }
+
+            $ms = New-Object System.IO.MemoryStream
+            $bw = New-Object System.IO.BinaryWriter $ms
+            $bw.Write([System.Text.Encoding]::ASCII.GetBytes('RIFF'))
+            $bw.Write([int](36 + $totalSamples))
+            $bw.Write([System.Text.Encoding]::ASCII.GetBytes('WAVE'))
+            $bw.Write([System.Text.Encoding]::ASCII.GetBytes('fmt '))
+            $bw.Write([int]16)
+            $bw.Write([int16]1) # PCM
+            $bw.Write([int16]1) # Mono
+            $bw.Write([int]$sampleRate)
+            $bw.Write([int]$sampleRate)
+            $bw.Write([int16]1) # BlockAlign
+            $bw.Write([int16]8) # BitsPerSample
+            $bw.Write([System.Text.Encoding]::ASCII.GetBytes('data'))
+            $bw.Write([int]$totalSamples)
+            $bw.Write($data)
+            $bw.Flush()
+            $ms.Position = 0
+
+            $player = New-Object System.Media.SoundPlayer $ms
+            $player.PlaySync()
+            $player.Dispose()
+            $bw.Dispose()
+            $ms.Dispose()
+        } catch {
+            # Audio is a progressive enhancement; fail silently if sound hardware is unavailable
+        }
+    }) | Out-Null
+}
+
+function Start-WinUtilBatLaunchAnimation {
+    <#
+        .SYNOPSIS
+            Animates the Demobats flying across the launching overlay, plays sound, and fades out.
+    #>
+    [CmdletBinding()]
+    param()
+
+    if ($null -eq $sync -or $null -eq $sync.WPFLaunchOverlay) {
+        return
+    }
+
+    # Start the sound effect in the background
+    Start-WinUtilStrangerThingsAudio -Theme "BatLaunch"
+
+    # Smooth animation timer
+    $clock = [System.Diagnostics.Stopwatch]::StartNew()
+    $timer = New-Object System.Windows.Threading.DispatcherTimer
+    $timer.Interval = [TimeSpan]::FromMilliseconds(20)
+
+    $timer.Add_Tick({
+        $elapsed = $clock.Elapsed.TotalSeconds
+
+        # Demobat 1 (Large leader bat flying from top-left across screen)
+        if ($null -ne $sync.WPFDemobat1 -and $null -ne $sync.WPFDemobat1.RenderTransform) {
+            $tg1 = $sync.WPFDemobat1.RenderTransform
+            $flap1 = $tg1.Children[0]
+            $pos1 = $tg1.Children[2]
+            $flap1.ScaleY = 0.5 + 0.5 * [math]::Abs([math]::Sin($elapsed * 26))
+            $pos1.X = -120 + ($elapsed / 2.2) * 1450
+            $pos1.Y = 80 + 35 * [math]::Sin($elapsed * 5)
+        }
+
+        # Demobat 2 (Swarm bat 2 flying from top-right towards bottom-left)
+        if ($null -ne $sync.WPFDemobat2 -and $null -ne $sync.WPFDemobat2.RenderTransform) {
+            $tg2 = $sync.WPFDemobat2.RenderTransform
+            $flap2 = $tg2.Children[0]
+            $pos2 = $tg2.Children[2]
+            $flap2.ScaleY = 0.5 + 0.5 * [math]::Abs([math]::Cos($elapsed * 22))
+            $pos2.X = 1250 - ($elapsed / 2.2) * 1400
+            $pos2.Y = 240 + 45 * [math]::Cos($elapsed * 6)
+        }
+
+        # Demobat 3 (Swarm bat 3 darting across)
+        if ($null -ne $sync.WPFDemobat3 -and $null -ne $sync.WPFDemobat3.RenderTransform) {
+            $tg3 = $sync.WPFDemobat3.RenderTransform
+            $flap3 = $tg3.Children[0]
+            $pos3 = $tg3.Children[2]
+            $flap3.ScaleY = 0.4 + 0.6 * [math]::Abs([math]::Sin($elapsed * 30))
+            $pos3.X = -150 + ($elapsed / 1.9) * 1350
+            $pos3.Y = 320 - 30 * [math]::Sin($elapsed * 7)
+        }
+
+        # Fade out overlay in the final 0.6 seconds
+        if ($elapsed -ge 1.6) {
+            $opacity = [math]::Max(0.0, 1.0 - (($elapsed - 1.6) / 0.55))
+            $sync.WPFLaunchOverlay.Opacity = $opacity
+        }
+
+        # Complete and dismiss
+        if ($elapsed -ge 2.2) {
+            $timer.Stop()
+            $clock.Stop()
+            $sync.WPFLaunchOverlay.Visibility = [System.Windows.Visibility]::Collapsed
+        }
+    })
+
+    $timer.Start()
+}
+
+function Invoke-WinUtilVecnaExit {
+    <#
+        .SYNOPSIS
+            Displays the Vecna exit screen when the user closes the window.
+            Returns $true if the screen was shown and close was deferred, $false if already handled.
+    #>
+    [CmdletBinding()]
+    param()
+
+    if ($null -eq $sync -or $null -eq $sync.WPFVecnaOverlay) {
+        return $false
+    }
+
+    if ($script:WinUtilVecnaExitHandled) {
+        return $false
+    }
+
+    $script:WinUtilVecnaExitHandled = $true
+
+    try {
+        $img = Get-WinUtilVecnaImage
+        if ($null -ne $img -and $null -ne $sync.WPFVecnaImage) {
+            $sync.WPFVecnaImage.Source = $img
+        }
+
+        if ($null -ne $sync.WPFVecnaHeader) {
+            $sync.WPFVecnaHeader.Text = "VECNA IS WATCHING..."
+        }
+        if ($null -ne $sync.WPFVecnaMessage) {
+            $sync.WPFVecnaMessage.Text = "You cannot escape the Upside Down... Closing WinUtil."
+        }
+        if ($null -ne $sync.WPFVecnaDismissButton) {
+            $sync.WPFVecnaDismissButton.Content = "Exit Now"
+            $sync.WPFVecnaDismissButton.Add_Click({
+                $sync.Form.Close()
+            })
+        }
+
+        $sync.WPFVecnaOverlay.Visibility = [System.Windows.Visibility]::Visible
+        Start-WinUtilStrangerThingsAudio -Theme "VecnaExit"
+
+        # Auto close after 2.0 seconds if user does not click Exit Now
+        $autoCloseTimer = New-Object System.Windows.Threading.DispatcherTimer
+        $autoCloseTimer.Interval = [TimeSpan]::FromSeconds(2.0)
+        $autoCloseTimer.Add_Tick({
+            $this.Stop()
+            if (Test-WinUtilUIAlive) {
+                $sync.Form.Close()
+            }
+        })
+        $autoCloseTimer.Start()
+
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Invoke-WinUtilVecnaCompletion {
+    <#
+        .SYNOPSIS
+            Displays the Vecna screen when operations/scripts finish.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter()]
+        [string]$JobLabel = "Operations"
+    )
+
+    if (-not (Test-WinUtilUIAlive) -or $null -eq $sync.WPFVecnaOverlay) {
+        return
+    }
+
+    Invoke-WPFUIThread -Async -ScriptBlock {
+        try {
+            $img = Get-WinUtilVecnaImage
+            if ($null -ne $img -and $null -ne $sync.WPFVecnaImage) {
+                $sync.WPFVecnaImage.Source = $img
+            }
+
+            if ($null -ne $sync.WPFVecnaHeader) {
+                $sync.WPFVecnaHeader.Text = "RUNNING UP THAT HILL"
+            }
+            if ($null -ne $sync.WPFVecnaMessage) {
+                $sync.WPFVecnaMessage.Text = "$JobLabel completed successfully! You have escaped the Upside Down."
+            }
+            if ($null -ne $sync.WPFVecnaDismissButton) {
+                $sync.WPFVecnaDismissButton.Content = "Continue"
+                $sync.WPFVecnaDismissButton.Add_Click({
+                    if ($null -ne $sync.WPFVecnaOverlay) {
+                        $sync.WPFVecnaOverlay.Visibility = [System.Windows.Visibility]::Collapsed
+                    }
+                })
+            }
+
+            $sync.WPFVecnaOverlay.Visibility = [System.Windows.Visibility]::Visible
+            Start-WinUtilStrangerThingsAudio -Theme "Victory"
+        } catch {}
+    }
+}
+
 function Invoke-WinutilThemeChange {
     <#
     .SYNOPSIS
@@ -7604,6 +7946,13 @@ function Start-WinUtilJob {
                     # The worker is still finished, so its slot must always be released.
                     $null = Clear-WinUtilActiveJob -Token $JobToken
 
+                    # Display Vecna completion modal overlay
+                    try {
+                        if (Test-WinUtilUIAlive) {
+                            Invoke-WinUtilVecnaCompletion -JobLabel $JobLabel
+                        }
+                    } catch {}
+
                     # Auto-hide progress bar 3 seconds after job finishes so it does not linger indefinitely
                     try {
                         if (Test-WinUtilUIAlive) {
@@ -7888,6 +8237,15 @@ function Start-WinUtilUserInterface {
             $closingArgs.Cancel = $true
             Invoke-WinUtilCloseRequest -RunningJob $sync.ActiveJob
             return
+        }
+
+        # Show Vecna Exit screen once before closing
+        if (-not $sync.ForceClose -and -not $sync.FinishInConsole) {
+            $shown = Invoke-WinUtilVecnaExit
+            if ($shown) {
+                $closingArgs.Cancel = $true
+                return
+            }
         }
 
         # Work that is meant to outlive the window needs the pool it is running on. main.ps1
@@ -8271,6 +8629,7 @@ Version  : <a href="https://github.com/ChrisTitusTech/winutil/releases/tag/$($sy
     $sync["Form"].Dispatcher.BeginInvoke([System.Windows.Threading.DispatcherPriority]::Input, [action]{
         $sinceStart = [int]((Get-Date) - $sync.StartedAt).TotalMilliseconds
         Write-WinUtilLog -Level "DEBUG" -Component "UI" -Message "timing: interface ready for input $sinceStart ms after start."
+        Start-WinUtilBatLaunchAnimation
     }) | Out-Null
 
     $sync["Form"].ShowDialog() | Out-Null
@@ -9882,6 +10241,15 @@ function Invoke-WPFButtonAction {
             }
         }
         "WPFselectedAppsButton" {$sync.selectedAppsPopup.IsOpen = -not $sync.selectedAppsPopup.IsOpen}
+        "WPFVecnaDismissButton" {
+            if ($null -ne $sync.WPFVecnaOverlay) {
+                if ($script:WinUtilVecnaExitHandled) {
+                    $sync.Form.Close()
+                } else {
+                    $sync.WPFVecnaOverlay.Visibility = [System.Windows.Visibility]::Collapsed
+                }
+            }
+        }
     }
 }
 
@@ -18866,7 +19234,7 @@ $inputXML = @'
                 </Setter.Value>
             </Setter>
         </Style>
-        <!-- Filter Chip Style — used by the Install tab category filter buttons -->
+        <!-- Filter Chip Style â€” used by the Install tab category filter buttons -->
         <Style x:Key="FilterChipStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Margin" Value="2"/>
             <Setter Property="Padding" Value="12,0,12,0"/>
@@ -19831,7 +20199,7 @@ $inputXML = @'
                                 </Style>
                             </TabControl.Resources>
 
-                            <!-- ─── STEP 1 : Select Windows 11 ISO ─────────────── -->
+                            <!-- â”€â”€â”€ STEP 1 : Select Windows 11 ISO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
                             <TabItem Name="WPFWin11ISOSelectSection" Tag="&#xE958;" Header="1   Select ISO">
                                 <StackPanel Style="{StaticResource Win11StepColumn}">
                                     <TextBlock Text="&#xE958;" Style="{StaticResource Win11StepHero}"/>
@@ -19896,7 +20264,7 @@ $inputXML = @'
                                 </StackPanel>
                             </TabItem>
 
-                            <!-- ─── STEP 2 : Modify install.wim ───────────────────── -->
+                            <!-- â”€â”€â”€ STEP 2 : Modify install.wim â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
                             <TabItem Name="WPFWin11ISOModifySection" IsEnabled="False" Tag="&#xE713;" Header="2   Modify Image">
                                 <StackPanel Style="{StaticResource Win11StepColumn}">
                                     <TextBlock Text="&#xE713;" Style="{StaticResource Win11StepHero}"/>
@@ -19986,7 +20354,7 @@ $inputXML = @'
                                 </StackPanel>
                             </TabItem>
 
-                            <!-- ─── STEP 3 : Output Options ───────────────────────── -->
+                            <!-- â”€â”€â”€ STEP 3 : Output Options â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
                             <TabItem Name="WPFWin11ISOOutputSection" IsEnabled="False" Tag="&#xE88E;" Header="3   Output">
                                 <StackPanel Style="{StaticResource Win11StepColumn}">
                                     <TextBlock Text="&#xE88E;" Style="{StaticResource Win11StepHero}"/>
@@ -20057,7 +20425,7 @@ $inputXML = @'
                                 </StackPanel>
                             </TabItem>
 
-                            <!-- ─── Working page: selected while a step runs, no header of its own ─── -->
+                            <!-- â”€â”€â”€ Working page: selected while a step runs, no header of its own â”€â”€â”€ -->
                             <TabItem Name="WPFWin11ISOWorkingSection" Visibility="Collapsed">
                                 <StackPanel Style="{StaticResource Win11StepColumn}">
                                     <!-- BitmapCache because this is text: without it WPF re-rasterises the
@@ -20128,7 +20496,7 @@ $inputXML = @'
                         </Grid>
                     </Border>
 
-                    <!-- ─── Status log ─── -->
+                    <!-- â”€â”€â”€ Status log â”€â”€â”€ -->
                     <Border Grid.Column="1" Style="{StaticResource BorderStyle}" Padding="20,16">
                         <Grid>
                             <Grid.RowDefinitions>
@@ -20240,6 +20608,143 @@ $inputXML = @'
                 <Button Name="WPFCancelJob" Grid.Column="1" Content=" Cancel " Margin="6,0,0,0" Padding="14,4" Height="28" VerticalAlignment="Center" Foreground="#FFFFFF" Background="#DC2626" BorderThickness="0" Cursor="Hand" FontWeight="SemiBold" ToolTip="Cancel the currently running operation"/>
             </Grid>
         </Border>
+
+        <!-- Stranger Things Demobat Launch Animation Overlay -->
+        <Grid Name="WPFLaunchOverlay" Grid.Row="0" Grid.RowSpan="6" Background="#FA06070B" Panel.ZIndex="1000" IsHitTestVisible="False">
+            <Canvas HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ClipToBounds="True">
+                <!-- Red atmospheric vignette -->
+                <Ellipse Width="800" Height="500" Canvas.Left="200" Canvas.Top="120" Opacity="0.18">
+                    <Ellipse.Fill>
+                        <RadialGradientBrush>
+                            <GradientStop Color="#FFFF1824" Offset="0"/>
+                            <GradientStop Color="#00000000" Offset="1"/>
+                        </RadialGradientBrush>
+                    </Ellipse.Fill>
+                </Ellipse>
+
+                <!-- Demobat 1 (Leader bat) -->
+                <Path Name="WPFDemobat1" Fill="#FF2A3A" Opacity="0.95" Data="M 0,15 C 10,0 25,5 35,-5 C 45,-15 50,-5 55,5 C 60,-5 65,-15 75,-5 C 85,5 100,0 110,15 C 95,15 85,25 75,35 C 70,25 65,22 55,25 C 45,22 40,25 35,35 C 25,25 15,15 0,15 Z">
+                    <Path.Effect>
+                        <DropShadowEffect Color="#FF1824" BlurRadius="12" ShadowDepth="0" Opacity="0.9"/>
+                    </Path.Effect>
+                    <Path.RenderTransform>
+                        <TransformGroup>
+                            <ScaleTransform ScaleX="1.2" ScaleY="1.2" CenterX="55" CenterY="15"/>
+                            <RotateTransform Angle="-12" CenterX="55" CenterY="15"/>
+                            <TranslateTransform X="-150" Y="80"/>
+                        </TransformGroup>
+                    </Path.RenderTransform>
+                </Path>
+
+                <!-- Demobat 2 (Swarm bat 2) -->
+                <Path Name="WPFDemobat2" Fill="#DD1824" Opacity="0.80" Data="M 0,15 C 10,0 25,5 35,-5 C 45,-15 50,-5 55,5 C 60,-5 65,-15 75,-5 C 85,5 100,0 110,15 C 95,15 85,25 75,35 C 70,25 65,22 55,25 C 45,22 40,25 35,35 C 25,25 15,15 0,15 Z">
+                    <Path.Effect>
+                        <DropShadowEffect Color="#FF1824" BlurRadius="8" ShadowDepth="0" Opacity="0.8"/>
+                    </Path.Effect>
+                    <Path.RenderTransform>
+                        <TransformGroup>
+                            <ScaleTransform ScaleX="0.8" ScaleY="0.8" CenterX="55" CenterY="15"/>
+                            <RotateTransform Angle="15" CenterX="55" CenterY="15"/>
+                            <TranslateTransform X="1200" Y="260"/>
+                        </TransformGroup>
+                    </Path.RenderTransform>
+                </Path>
+
+                <!-- Demobat 3 (Swarm bat 3) -->
+                <Path Name="WPFDemobat3" Fill="#AA1824" Opacity="0.70" Data="M 0,15 C 10,0 25,5 35,-5 C 45,-15 50,-5 55,5 C 60,-5 65,-15 75,-5 C 85,5 100,0 110,15 C 95,15 85,25 75,35 C 70,25 65,22 55,25 C 45,22 40,25 35,35 C 25,25 15,15 0,15 Z">
+                    <Path.Effect>
+                        <DropShadowEffect Color="#FF1824" BlurRadius="6" ShadowDepth="0" Opacity="0.7"/>
+                    </Path.Effect>
+                    <Path.RenderTransform>
+                        <TransformGroup>
+                            <ScaleTransform ScaleX="0.55" ScaleY="0.55" CenterX="55" CenterY="15"/>
+                            <RotateTransform Angle="-8" CenterX="55" CenterY="15"/>
+                            <TranslateTransform X="-100" Y="320"/>
+                        </TransformGroup>
+                    </Path.RenderTransform>
+                </Path>
+            </Canvas>
+
+            <!-- Center Stranger Things Title & Subtitle while launching -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="WINUTIL-MAX"
+                           FontFamily="Century Gothic, Segoe UI, Trebuchet MS"
+                           FontWeight="Black"
+                           FontSize="34"
+                           Foreground="#FF2A3A"
+                           LetterSpacing="4"
+                           HorizontalAlignment="Center">
+                    <TextBlock.Effect>
+                        <DropShadowEffect Color="#FF1824" BlurRadius="22" ShadowDepth="0" Opacity="1.0"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+                <Border Background="#33FF1824" BorderBrush="#55FF1824" BorderThickness="1" CornerRadius="4" Margin="0,12,0,0" Padding="10,4" HorizontalAlignment="Center">
+                    <TextBlock Text="ENTERING THE UPSIDE DOWN..."
+                               FontFamily="Segoe UI"
+                               FontSize="12"
+                               FontWeight="Bold"
+                               Foreground="#FF5565"
+                               LetterSpacing="3"
+                               HorizontalAlignment="Center"/>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- Vecna Exit and Completion Modal Overlay -->
+        <Grid Name="WPFVecnaOverlay" Grid.Row="0" Grid.RowSpan="6" Background="#F208080C" Panel.ZIndex="1001" Visibility="Collapsed">
+            <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="#16080A" BorderBrush="#FF1824" BorderThickness="2" CornerRadius="12"
+                    MaxWidth="640" Margin="20" Padding="18">
+                <Border.Effect>
+                    <DropShadowEffect Color="#FF1824" BlurRadius="30" ShadowDepth="0" Opacity="0.95"/>
+                </Border.Effect>
+                <StackPanel HorizontalAlignment="Center">
+                    <!-- Glowing Red Header -->
+                    <TextBlock Name="WPFVecnaHeader"
+                               Text="VECNA IS WATCHING..."
+                               FontFamily="Century Gothic, Segoe UI"
+                               FontWeight="Black"
+                               FontSize="22"
+                               Foreground="#FF2A3A"
+                               LetterSpacing="3"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,12">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Color="#FF1824" BlurRadius="12" ShadowDepth="0" Opacity="0.9"/>
+                        </TextBlock.Effect>
+                    </TextBlock>
+
+                    <!-- Vecna Image with rounded corners and glowing shadow -->
+                    <Border CornerRadius="8" ClipToBounds="True" MaxWidth="580" MaxHeight="320" Margin="0,0,0,14" BorderBrush="#44FF1824" BorderThickness="1">
+                        <Image Name="WPFVecnaImage" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <!-- Message text -->
+                    <TextBlock Name="WPFVecnaMessage"
+                               Text="You cannot escape the Upside Down... Closing WinUtil."
+                               FontFamily="Segoe UI"
+                               FontSize="13"
+                               Foreground="#FFEEEEEE"
+                               HorizontalAlignment="Center"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"
+                               Margin="0,0,0,14"/>
+
+                    <!-- Action buttons -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Name="WPFVecnaDismissButton"
+                                Content="Close Now"
+                                Style="{StaticResource HoverButtonStyle}"
+                                Background="#33FF1824"
+                                Foreground="#FF2A3A"
+                                FontWeight="Bold"
+                                FontSize="13"
+                                Padding="16,6"
+                                Margin="6,0,6,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </Window>
 

@@ -170,6 +170,15 @@ function Start-WinUtilUserInterface {
             return
         }
 
+        # Show Vecna Exit screen once before closing
+        if (-not $sync.ForceClose -and -not $sync.FinishInConsole) {
+            $shown = Invoke-WinUtilVecnaExit
+            if ($shown) {
+                $closingArgs.Cancel = $true
+                return
+            }
+        }
+
         # Work that is meant to outlive the window needs the pool it is running on. main.ps1
         # waits for it and shuts the pool down once it is done.
         if ($sync.FinishInConsole) {
@@ -551,6 +560,7 @@ Version  : <a href="https://github.com/ChrisTitusTech/winutil/releases/tag/$($sy
     $sync["Form"].Dispatcher.BeginInvoke([System.Windows.Threading.DispatcherPriority]::Input, [action]{
         $sinceStart = [int]((Get-Date) - $sync.StartedAt).TotalMilliseconds
         Write-WinUtilLog -Level "DEBUG" -Component "UI" -Message "timing: interface ready for input $sinceStart ms after start."
+        Start-WinUtilBatLaunchAnimation
     }) | Out-Null
 
     $sync["Form"].ShowDialog() | Out-Null
