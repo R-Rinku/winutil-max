@@ -1084,7 +1084,11 @@ function Get-WinUtilAppIcon {
         if (-not [string]::IsNullOrWhiteSpace($p) -and (Test-Path $p -ErrorAction SilentlyContinue)) {
             try {
                 $uri = New-Object System.Uri((Resolve-Path $p).Path)
-                return [Windows.Media.Imaging.BitmapFrame]::Create($uri)
+                $frame = [Windows.Media.Imaging.BitmapFrame]::Create($uri)
+                if ($frame.CanFreeze -and -not $frame.IsFrozen) {
+                    $frame.Freeze()
+                }
+                return $frame
             } catch {}
         }
     }
@@ -1094,8 +1098,11 @@ function Get-WinUtilAppIcon {
     try {
         $bytes = [Convert]::FromBase64String($base64)
         $ms = New-Object System.IO.MemoryStream(,$bytes)
-        $decoder = [Windows.Media.Imaging.IconBitmapDecoder]::new($ms, [Windows.Media.Imaging.BitmapCreateOptions]::None, [Windows.Media.Imaging.BitmapCacheOption]::OnLoad)
-        return $decoder.Frames[0]
+        $frame = $decoder.Frames[0]
+        if ($frame.CanFreeze -and -not $frame.IsFrozen) {
+            $frame.Freeze()
+        }
+        return $frame
     } catch {
         return $null
     }
@@ -2641,6 +2648,9 @@ function Invoke-WinUtilAssets {
       'logo' {
           $appIcon = Get-WinUtilAppIcon
           if ($null -ne $appIcon) {
+              if ($appIcon.CanFreeze -and -not $appIcon.IsFrozen) {
+                  $appIcon.Freeze()
+              }
               if ($render) {
                   if ($null -ne $sync -and $sync.ContainsKey("RenderedAssetCache")) {
                       $sync.RenderedAssetCache[$cacheKey] = $appIcon

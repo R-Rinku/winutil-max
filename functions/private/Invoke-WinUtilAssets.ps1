@@ -37,6 +37,9 @@ function Invoke-WinUtilAssets {
       'logo' {
           $appIcon = Get-WinUtilAppIcon
           if ($null -ne $appIcon) {
+              if ($appIcon.CanFreeze -and -not $appIcon.IsFrozen) {
+                  $appIcon.Freeze()
+              }
               if ($render) {
                   if ($null -ne $sync -and $sync.ContainsKey("RenderedAssetCache")) {
                       $sync.RenderedAssetCache[$cacheKey] = $appIcon

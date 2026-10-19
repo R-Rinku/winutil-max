@@ -447,6 +447,7 @@ Describe "XAML and sync wiring" {
             "PendingCloseWork",
             "StopWatchdogTimer",
             "IconFetchRunning",
+            "EnterpriseMode",
             "selected",
             "selectedAppx",
             "selectedApps",
