@@ -211,7 +211,7 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
     }
 
     $elevationCommand = New-WinUtilElevationCommand -ScriptPath $PSCommandPath -Parameters $elevationParameters
-    Start-Process $powershellCmd -ArgumentList @("-ExecutionPolicy", "Bypass", "-NoProfile", "-WindowStyle", "Hidden", "-EncodedCommand", $elevationCommand) -Verb RunAs
+    Start-Process $powershellCmd -ArgumentList @("-ExecutionPolicy", "Bypass", "-NoProfile", "-EncodedCommand", $elevationCommand) -Verb RunAs
     break
 }
 
@@ -1066,8 +1066,7 @@ function Get-WinUtilAppIcon {
 
     # Try local file first
     $localPaths = @(
-        ".\assets\Ri.ico",
-        "C:\Users\Rinku\Github\Ri.ico"
+        ".\assets\Ri.ico"
     )
     if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
         $localPaths = @((Join-Path $PSScriptRoot "..\..\assets\Ri.ico")) + $localPaths
@@ -2387,6 +2386,7 @@ function Install-WinUtilProgramChoco {
         }
 
         Write-WinUtilLog -Component "Package" -Message "$Action choco package: $program"
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> $Action $program via Chocolatey..." -ForegroundColor Cyan
 
         # --no-progress stops choco redrawing a percentage line that only makes sense on a
         # console nobody is watching
@@ -2414,6 +2414,14 @@ function Install-WinUtilProgramChoco {
         } else {
             $outcome = "Failed"
             $detail = if ($exitCode -eq -1) { "Chocolatey command did not start" } else { "exit code $exitCode" }
+        }
+
+        if ($outcome -eq "Succeeded") {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] $program ($detail)" -ForegroundColor Green
+        } elseif ($outcome -eq "Skipped") {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [INFO] $program ($detail)" -ForegroundColor Yellow
+        } else {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [FAILED] $program via Chocolatey ($detail)" -ForegroundColor Red
         }
 
         $level = if ($outcome -eq "Failed") { "ERROR" } else { "INFO" }
@@ -2501,6 +2509,7 @@ Function Install-WinUtilProgramWinget {
         }
 
         Write-WinUtilLog -Component "Package" -Message "$Action winget package: $program (source: $source)"
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> $Action $program via WinGet..." -ForegroundColor Cyan
 
         $outcome = "Failed"
         $detail = "no result"
@@ -2544,6 +2553,14 @@ Function Install-WinUtilProgramWinget {
             # The client module reports the same failure as a bare HRESULT, so the hex form and
             # Microsoft's own list serve both paths
             $detail = "WinGet reported 0x{0:X8}. See https://learn.microsoft.com/windows/package-manager/winget/returnCodes" -f $exitCode
+        }
+
+        if ($outcome -eq "Succeeded") {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] $program ($detail)" -ForegroundColor Green
+        } elseif ($outcome -eq "Skipped") {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [INFO] $program ($detail)" -ForegroundColor Yellow
+        } else {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [FAILED] $program ($detail)" -ForegroundColor Red
         }
 
         $level = if ($outcome -eq "Failed") { "ERROR" } else { "INFO" }
@@ -7001,7 +7018,7 @@ function Show-WinUtilMaxSplash {
         Add-Type -AssemblyName PresentationFramework -ErrorAction SilentlyContinue
         Add-Type -AssemblyName WindowsBase -ErrorAction SilentlyContinue
         $image = $null
-        $localCandidates = @((Join-Path (Get-Location).Path 'MAX.jpg'), 'C:\Users\Rinku\Github\Windows-Tweaks-Hub\MAX.jpg')
+        $localCandidates = @((Join-Path (Get-Location).Path 'MAX.jpg'))
         if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) { $localCandidates = @((Join-Path $PSScriptRoot '..\..\MAX.jpg')) + $localCandidates }
         foreach ($candidate in $localCandidates) {
             if (-not [string]::IsNullOrWhiteSpace($candidate) -and (Test-Path -LiteralPath $candidate -ErrorAction SilentlyContinue)) {
@@ -10492,9 +10509,28 @@ function Invoke-WPFInstall {
                 $position = $completedPackages + 1
                 Step-WinUtilJob -Status "Installing $program ($position/$totalPackages)" -Percent ([int](($completedPackages / $totalPackages) * 100))
 
-                $results += Measure-WinUtilStep -Scope "Install" -Name "winget $program" -ScriptBlock {
+                $stepResult = Measure-WinUtilStep -Scope "Install" -Name "winget $program" -ScriptBlock {
                     Install-WinUtilProgramWinget -Action Install -Programs @($program)
                 }
+
+                # SMART BACKUP: If WinGet failed, attempt Chocolatey fallback if available
+                $failedItem = @($stepResult | Where-Object { $_.Outcome -eq "Failed" })
+                if ($failedItem.Count -gt 0) {
+                    $matchingApp = @($PackagesToInstall | Where-Object { $_.winget -eq $program })[0]
+                    if ($matchingApp -and -not [string]::IsNullOrWhiteSpace($matchingApp.choco) -and $matchingApp.choco -ne "na") {
+                        $chocoBackupId = $matchingApp.choco
+                        Write-Host "[winutil-MAX] [BACKUP] WinGet failed for $program. Attempting Chocolatey fallback: $chocoBackupId..." -ForegroundColor Yellow
+                        Step-WinUtilJob -Status "WinGet failed for $program. Retrying with Chocolatey ($chocoBackupId)..."
+                        Install-WinUtilChoco
+                        $chocoBackupRes = Install-WinUtilProgramChoco -Action Install -Programs @($chocoBackupId)
+                        if (@($chocoBackupRes | Where-Object { $_.Outcome -eq "Succeeded" }).Count -gt 0) {
+                            Write-Host "[winutil-MAX] [BACKUP SUCCESS] Successfully installed $program using Chocolatey!" -ForegroundColor Green
+                            $stepResult = $chocoBackupRes
+                        }
+                    }
+                }
+
+                $results += $stepResult
                 $completedPackages++
                 Step-WinUtilJob -Status "Installed $program ($completedPackages/$totalPackages)" -Percent ([int](($completedPackages / $totalPackages) * 100))
             }

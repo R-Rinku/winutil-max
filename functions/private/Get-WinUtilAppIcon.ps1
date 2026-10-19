@@ -8,8 +8,7 @@ function Get-WinUtilAppIcon {
 
     # Try local file first
     $localPaths = @(
-        ".\assets\Ri.ico",
-        "C:\Users\Rinku\Github\Ri.ico"
+        ".\assets\Ri.ico"
     )
     if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
         $localPaths = @((Join-Path $PSScriptRoot "..\..\assets\Ri.ico")) + $localPaths
