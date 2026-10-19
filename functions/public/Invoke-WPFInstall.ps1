@@ -5,7 +5,15 @@ function Invoke-WPFInstall {
     #>
     param(
         [Parameter(Mandatory = $false)]
-        [PSObject[]]$PackagesToInstall = $($sync.selectedApps | Foreach-Object { $sync.configs.applicationsHashtable.$_ })
+        [PSObject[]]$PackagesToInstall = $($sync.selectedApps | Foreach-Object {
+            if ($sync.configs.applicationsHashtable.ContainsKey($_)) {
+                $sync.configs.applicationsHashtable[$_]
+            } elseif ($sync.configs.applicationsHashtable.ContainsKey("WPFInstall$_")) {
+                $sync.configs.applicationsHashtable["WPFInstall$_"]
+            } elseif ($_.StartsWith("WPFInstall") -and $sync.configs.applicationsHashtable.ContainsKey($_.Substring(10))) {
+                $sync.configs.applicationsHashtable[$_.Substring(10)]
+            }
+        })
     )
 
     if ($PackagesToInstall.Count -eq 0) {

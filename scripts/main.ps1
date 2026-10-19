@@ -11,6 +11,7 @@ if ($host.UI.RawUI) {
 $sync.configs.applicationsHashtable = @{}
 $sync.configs.applications.PSObject.Properties | ForEach-Object {
     $sync.configs.applicationsHashtable[$_.Name] = $_.Value
+    $sync.configs.applicationsHashtable["WPFInstall$($_.Name)"] = $_.Value
 }
 
 $sync.configs.appxHashtable = @{}

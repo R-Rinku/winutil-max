@@ -51,7 +51,7 @@ function Remove-WinUtilProvisionedAPPX {
     }
 
     $removalOutput = powershell.exe -NoProfile -NonInteractive -Command $ps5Command -args $PackageList 2>&1
-    if ($LASTEXITCODE -ne 0 -or $null -ne $removalOutput) {
+    if ($LASTEXITCODE -ne 0) {
         $failureDetails = ($removalOutput | Out-String).Trim()
         $errorMessage = "AppX provisioned package removal failed: $failureDetails"
         Write-WinUtilLog -Level "ERROR" -Component "AppX" -Message $errorMessage

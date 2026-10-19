@@ -48,7 +48,9 @@ function Invoke-WPFtweaksbutton {
 
     # The restore point has to be taken before anything else changes
     $restorePointTweak = "WPFTweaksRestorePoint"
-    $tweaksToRun = @($Tweaks | Where-Object { $_ -ne $restorePointTweak })
+    $diskCleanupTweak = "WPFTweaksDiskCleanup"
+    $hasDiskCleanup = $Tweaks -contains $diskCleanupTweak
+    $tweaksToRun = @($Tweaks | Where-Object { $_ -ne $restorePointTweak -and $_ -ne $diskCleanupTweak })
     $totalSteps = [Math]::Max(@($Tweaks).Count, 1)
     $completedSteps = 0
 
@@ -80,6 +82,23 @@ function Invoke-WPFtweaksbutton {
       }
       $completedSteps++
       Step-WinUtilJob -Percent ([int](($completedSteps / $totalSteps) * 100))
+    }
+
+    # Run Disk Cleanup at the very end of all tweaks as requested
+    if ($hasDiskCleanup) {
+      $noticeMsg = "Disk Cleanup: Notice - this may take several minutes depending on temp and update cache size."
+      Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [NOTICE] Running Disk Cleanup at the end of tweaks. This may take several minutes depending on system temp and Windows Update cache..." -ForegroundColor Yellow
+      Write-WinUtilLog -Component "Tweaks" -Message "Disk Cleanup scheduled at the end of tweaks. Running cleanmgr and component cleanup..."
+      Step-WinUtilJob -Status $noticeMsg -Percent ([int](($completedSteps / $totalSteps) * 100))
+      Start-Sleep -Seconds 2
+
+      Step-WinUtilJob -Status "Running Disk Cleanup ($diskCleanupTweak)..." -Percent ([int](($completedSteps / $totalSteps) * 100))
+      Measure-WinUtilStep -Scope "Tweaks" -Name $diskCleanupTweak -ScriptBlock {
+        Invoke-WinUtilTweaks $diskCleanupTweak
+      }
+      $completedSteps++
+      Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Disk Cleanup completed." -ForegroundColor Green
+      Step-WinUtilJob -Percent 100
     }
   }
 }
