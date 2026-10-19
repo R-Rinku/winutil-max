@@ -1,18 +1,5 @@
-Write-Host @"
-           .-----------------.
-          /  .-------------.  \
-         /  /   .-"'"'"-.   \  \
-        |  |   /  .-. .-. \  |  |
-        |  |  |  ( o   o ) | |  |
-       (===)  |     ^     |  (===)    __  __     _     __  __
-       |   |   \   '-'   /   |   |   |  \/  |   / \    \ \/ /
-        \  \    '-------'   /  /     | |\/| |  / _ \    \  / 
-         \  '---------------'  /      | |  | | / ___ \   /  \ 
-          '-------------------'       |_|  |_|/_/   \_\ /_/\_\
-               /  .---.  \           
-              /  / [=] \  \          === WINUTIL - MAX ===
-             |  |WALKMAN|  |      "Running Up That Hill"
-"@ -ForegroundColor Magenta
+Write-Host "=== WINUTIL - MAX ===" -ForegroundColor Magenta
+Write-Host "Running Up That Hill" -ForegroundColor DarkMagenta
 
 if ($host.UI.RawUI) {
     try { $host.UI.RawUI.WindowTitle = "winutil-MAX" } catch {}
@@ -114,6 +101,8 @@ if ($Preset -or $Config) {
 # interface lives on, waits for that window to close, and reports anything the interface
 # thread failed with. Work started from the interface goes to the worker pool through
 # Start-WinUtilJob, so neither the window nor this thread is ever blocked by it.
+
+Show-WinUtilMaxSplash -DurationMs 1500
 
 $sync.UIRunspace = [runspacefactory]::CreateRunspace($Host, (New-WinUtilSessionState))
 $sync.UIRunspace.ApartmentState = "STA"

@@ -35,7 +35,7 @@ irm https://raw.githubusercontent.com/R-Rinku/winutil-max/main/winutil.ps1 | iex
 - **[MAX] Smart Bulk Name Modifier**: Interactive bulk file and folder renaming tool with live preview, text replacement, regex, case transformation, numbering sequences, prefix/suffix, and auto-elevation permissions.
 - **[MAX] Take Full Ownership**: One-click context menu integration (and removal) for taking file, folder, and drive ownership with built-in system directory safeguards.
 - **Enterprise Mode**: Dedicated enterprise safety preset with rigorous policy enforcement locking down high-risk tweaks (AppX bulk removal, Windows Update tampering, system components).
-- **Custom Max (Stranger Things) Aesthetics**: Terminal ASCII art of Max Mayfield with Walkman headphones, custom branding, and responsive dark theme.
+- **Custom Max (Stranger Things) Aesthetics**: Modern visual splash screen featuring Max Mayfield, custom branding, and responsive dark theme.
 
 ## Local Usage
 Run locally from an elevated PowerShell prompt:

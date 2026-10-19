@@ -210,15 +210,8 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
         return $elevated.ExitCode
     }
 
-    $processCmd = if (Get-Command wt.exe -ErrorAction SilentlyContinue) { "wt.exe" } else { "$powershellCmd" }
     $elevationCommand = New-WinUtilElevationCommand -ScriptPath $PSCommandPath -Parameters $elevationParameters
-
-    if ($processCmd -eq "wt.exe") {
-        Start-Process $processCmd -ArgumentList "$powershellCmd -ExecutionPolicy Bypass -NoProfile -EncodedCommand $elevationCommand" -Verb RunAs
-    } else {
-        Start-Process $processCmd -ArgumentList @("-ExecutionPolicy", "Bypass", "-NoProfile", "-EncodedCommand", $elevationCommand) -Verb RunAs
-    }
-
+    Start-Process $powershellCmd -ArgumentList @("-ExecutionPolicy", "Bypass", "-NoProfile", "-WindowStyle", "Hidden", "-EncodedCommand", $elevationCommand) -Verb RunAs
     break
 }
 

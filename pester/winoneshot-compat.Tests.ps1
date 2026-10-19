@@ -264,8 +264,12 @@ BeforeAll {
             [hashtable]$ArrayFields
         )
 
+        $convertParams = @{ ErrorAction = "Stop" }
+        if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey("NoEnumerate")) {
+            $convertParams["NoEnumerate"] = $true
+        }
         try {
-            $catalog = $Json | ConvertFrom-Json -NoEnumerate -ErrorAction Stop
+            $catalog = $Json | ConvertFrom-Json @convertParams
         } catch {
             return "WinOneShot cannot parse ${Name}: $_"
         }

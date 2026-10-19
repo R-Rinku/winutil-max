@@ -1,7 +1,7 @@
 function Get-WinUtilAppIcon {
     <#
     .SYNOPSIS
-        Returns the application icon BitmapFrame for Windows-Tweaks-Hub (Ri.ico).
+        Returns the application icon BitmapImage for Windows-Tweaks-Hub (Ri.ico).
     #>
     [CmdletBinding()]
     param()
@@ -16,14 +16,19 @@ function Get-WinUtilAppIcon {
     }
 
     foreach ($p in $localPaths) {
-        if (-not [string]::IsNullOrWhiteSpace($p) -and (Test-Path $p -ErrorAction SilentlyContinue)) {
+        if (-not [string]::IsNullOrWhiteSpace($p) -and (Test-Path -LiteralPath $p -ErrorAction SilentlyContinue)) {
             try {
-                $uri = New-Object System.Uri((Resolve-Path $p).Path)
-                $frame = [Windows.Media.Imaging.BitmapFrame]::Create($uri)
-                if ($frame.CanFreeze -and -not $frame.IsFrozen) {
-                    $frame.Freeze()
+                $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $p).Path)
+                $ms = New-Object System.IO.MemoryStream(,$bytes)
+                $img = New-Object System.Windows.Media.Imaging.BitmapImage
+                $img.BeginInit()
+                $img.StreamSource = $ms
+                $img.CacheOption = [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+                $img.EndInit()
+                if ($img.CanFreeze) {
+                    $img.Freeze()
                 }
-                return $frame
+                return $img
             } catch {}
         }
     }
@@ -33,11 +38,15 @@ function Get-WinUtilAppIcon {
     try {
         $bytes = [Convert]::FromBase64String($base64)
         $ms = New-Object System.IO.MemoryStream(,$bytes)
-        $frame = $decoder.Frames[0]
-        if ($frame.CanFreeze -and -not $frame.IsFrozen) {
-            $frame.Freeze()
+        $img = New-Object System.Windows.Media.Imaging.BitmapImage
+        $img.BeginInit()
+        $img.StreamSource = $ms
+        $img.CacheOption = [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+        $img.EndInit()
+        if ($img.CanFreeze) {
+            $img.Freeze()
         }
-        return $frame
+        return $img
     } catch {
         return $null
     }
