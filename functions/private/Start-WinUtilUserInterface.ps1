@@ -240,12 +240,22 @@ function Start-WinUtilUserInterface {
 
     $sync["Form"].Add_MouseLeftButtonDown({
         Invoke-WPFPopup -Action "Hide" -Popups @("Settings", "Theme", "FontScaling")
-        $sync["Form"].DragMove()
+        if ($_.ButtonState -eq [System.Windows.Input.MouseButtonState]::Pressed -and
+            $_.OriginalSource -isnot [System.Windows.Controls.Primitives.ButtonBase] -and
+            $_.OriginalSource -isnot [System.Windows.Controls.TextBox] -and
+            $_.OriginalSource -isnot [System.Windows.Controls.ComboBox] -and
+            $_.OriginalSource -isnot [System.Windows.Controls.Primitives.Thumb]) {
+            try {
+                $sync["Form"].DragMove()
+            } catch { }
+        }
     })
 
     $sync["Form"].Add_MouseDoubleClick({
         if ($_.OriginalSource.Name -eq "NavDockPanel" -or
-            $_.OriginalSource.Name -eq "GridBesideNavDockPanel") {
+            $_.OriginalSource.Name -eq "GridBesideNavDockPanel" -or
+            $_.OriginalSource -is [System.Windows.Controls.Grid] -or
+            $_.OriginalSource -is [System.Windows.Controls.Border]) {
                 if ($sync["Form"].WindowState -eq [Windows.WindowState]::Normal) {
                     [Windows.SystemCommands]::MaximizeWindow($sync.Form)
                 }
@@ -271,11 +281,11 @@ function Start-WinUtilUserInterface {
             $screenHeight = $workingArea.Height
             $sync.Form.MinWidth = [Math]::Min([double]$sync.Form.MinWidth, [double]$screenWidth)
 
-            # Ensure compatible sizing: default to comfortable 1200x780 or 95% of working area if smaller
-            $targetWidth = [Math]::Min(1200, [int]($screenWidth * 0.95))
-            $targetHeight = [Math]::Min(780, [int]($screenHeight * 0.92))
-            $sync.Form.Width = [Math]::Max(900, $targetWidth)
-            $sync.Form.Height = [Math]::Max(600, $targetHeight)
+            # Ensure compatible sizing: default to comfortable 1260x820 or up to 92-94% of working area on smaller screens
+            $targetWidth = [Math]::Min(1260, [int]($screenWidth * 0.94))
+            $targetHeight = [Math]::Min(820, [int]($screenHeight * 0.90))
+            $sync.Form.Width = [Math]::Max(950, $targetWidth)
+            $sync.Form.Height = [Math]::Max(650, $targetHeight)
 
             # Center window cleanly on the display working area
             $sync.Form.Left = [Math]::Max(0, [int]($workingArea.Left + ($screenWidth - $sync.Form.Width) / 2))
@@ -377,7 +387,7 @@ function Start-WinUtilUserInterface {
     $sync["Form"].Add_Loaded({
         param($e)
         $null = $e
-        $sync.Form.MinWidth = "900"
+        $sync.Form.MinWidth = "950"
         $sync["Form"].MaxWidth = [Double]::PositiveInfinity
         $sync["Form"].MaxHeight = [Double]::PositiveInfinity
 

@@ -7957,12 +7957,22 @@ function Start-WinUtilUserInterface {
 
     $sync["Form"].Add_MouseLeftButtonDown({
         Invoke-WPFPopup -Action "Hide" -Popups @("Settings", "Theme", "FontScaling")
-        $sync["Form"].DragMove()
+        if ($_.ButtonState -eq [System.Windows.Input.MouseButtonState]::Pressed -and
+            $_.OriginalSource -isnot [System.Windows.Controls.Primitives.ButtonBase] -and
+            $_.OriginalSource -isnot [System.Windows.Controls.TextBox] -and
+            $_.OriginalSource -isnot [System.Windows.Controls.ComboBox] -and
+            $_.OriginalSource -isnot [System.Windows.Controls.Primitives.Thumb]) {
+            try {
+                $sync["Form"].DragMove()
+            } catch { }
+        }
     })
 
     $sync["Form"].Add_MouseDoubleClick({
         if ($_.OriginalSource.Name -eq "NavDockPanel" -or
-            $_.OriginalSource.Name -eq "GridBesideNavDockPanel") {
+            $_.OriginalSource.Name -eq "GridBesideNavDockPanel" -or
+            $_.OriginalSource -is [System.Windows.Controls.Grid] -or
+            $_.OriginalSource -is [System.Windows.Controls.Border]) {
                 if ($sync["Form"].WindowState -eq [Windows.WindowState]::Normal) {
                     [Windows.SystemCommands]::MaximizeWindow($sync.Form)
                 }
@@ -7988,11 +7998,11 @@ function Start-WinUtilUserInterface {
             $screenHeight = $workingArea.Height
             $sync.Form.MinWidth = [Math]::Min([double]$sync.Form.MinWidth, [double]$screenWidth)
 
-            # Ensure compatible sizing: default to comfortable 1200x780 or 95% of working area if smaller
-            $targetWidth = [Math]::Min(1200, [int]($screenWidth * 0.95))
-            $targetHeight = [Math]::Min(780, [int]($screenHeight * 0.92))
-            $sync.Form.Width = [Math]::Max(900, $targetWidth)
-            $sync.Form.Height = [Math]::Max(600, $targetHeight)
+            # Ensure compatible sizing: default to comfortable 1260x820 or up to 92-94% of working area on smaller screens
+            $targetWidth = [Math]::Min(1260, [int]($screenWidth * 0.94))
+            $targetHeight = [Math]::Min(820, [int]($screenHeight * 0.90))
+            $sync.Form.Width = [Math]::Max(950, $targetWidth)
+            $sync.Form.Height = [Math]::Max(650, $targetHeight)
 
             # Center window cleanly on the display working area
             $sync.Form.Left = [Math]::Max(0, [int]($workingArea.Left + ($screenWidth - $sync.Form.Width) / 2))
@@ -8094,7 +8104,7 @@ function Start-WinUtilUserInterface {
     $sync["Form"].Add_Loaded({
         param($e)
         $null = $e
-        $sync.Form.MinWidth = "900"
+        $sync.Form.MinWidth = "950"
         $sync["Form"].MaxWidth = [Double]::PositiveInfinity
         $sync["Form"].MaxHeight = [Double]::PositiveInfinity
 
@@ -18028,13 +18038,13 @@ $inputXML = @'
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
         WindowStyle="SingleBorderWindow"
-        Width="1200"
-        Height="780"
-        MinWidth="900"
+        Width="1260"
+        Height="820"
+        MinWidth="950"
         MinHeight="600"
         Title="winutil-MAX - Running Up That Hill">
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="0" CornerRadius="10" UseAeroCaptionButtons="False"/>
+        <WindowChrome CaptionHeight="0" CornerRadius="10" UseAeroCaptionButtons="False" ResizeBorderThickness="6"/>
     </WindowChrome.WindowChrome>
     <Window.Resources>
     <Style TargetType="ToolTip">
@@ -19013,7 +19023,7 @@ $inputXML = @'
              on the chip itself instead of only in the results below. -->
         <Style x:Key="FilterChipToggleStyle" TargetType="ToggleButton">
             <Setter Property="Margin" Value="2"/>
-            <Setter Property="Padding" Value="12,4,12,4"/>
+            <Setter Property="Padding" Value="9,3,9,3"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FontSize" Value="{DynamicResource ButtonFontSize}"/>
             <Setter Property="FontFamily" Value="{DynamicResource ButtonFontFamily}"/>
@@ -19118,11 +19128,25 @@ $inputXML = @'
             <!-- Search Bar and Action Buttons -->
             <Grid Name="GridBesideNavDockPanel" Grid.Column="1" Background="{DynamicResource MainBackgroundColor}" ShowGridLines="False" Height="Auto">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="2*"/> <!-- Search bar area - priority space -->
-                    <ColumnDefinition Width="Auto"/><!-- Buttons area -->
+                    <ColumnDefinition Width="*"/>    <!-- Draggable space / Breathing room -->
+                    <ColumnDefinition Width="Auto"/> <!-- Search bar area -->
+                    <ColumnDefinition Width="Auto"/> <!-- Buttons area -->
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Margin="5,0,10,0" MinWidth="120" Height="{DynamicResource SearchBarHeight}" VerticalAlignment="Center" HorizontalAlignment="Stretch">
+                <!-- Draggable Middle Spacer -->
+                <Border Grid.Column="0" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <TextBlock Text="winutil-MAX"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               Margin="15,0,0,0"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Opacity="0.30"
+                               Foreground="{DynamicResource MainForegroundColor}"
+                               IsHitTestVisible="False"/>
+                </Border>
+
+                <Border Grid.Column="1" Margin="5,0,10,0" Width="220" Height="{DynamicResource SearchBarHeight}" VerticalAlignment="Center" HorizontalAlignment="Right">
                     <Grid>
                         <TextBox
                             Height="{DynamicResource SearchBarHeight}"
@@ -19143,18 +19167,18 @@ $inputXML = @'
                             FontSize="{DynamicResource IconFontSize}"
                             Margin="0,0,8,0" Width="Auto" Height="Auto">&#xE721;
                         </TextBlock>
+                        <Button
+                            VerticalAlignment="Center" HorizontalAlignment="Right"
+                            Name="SearchBarClearButton"
+                            Style="{StaticResource SearchBarClearButtonStyle}"
+                            AutomationProperties.Name="Clear Search"
+                            Margin="0,0,20,0" Visibility="Collapsed">
+                        </Button>
                     </Grid>
                 </Border>
-                <Button Grid.Column="0"
-                    VerticalAlignment="Center" HorizontalAlignment="Right"
-                    Name="SearchBarClearButton"
-                    Style="{StaticResource SearchBarClearButtonStyle}"
-                    AutomationProperties.Name="Clear Search"
-                    Margin="0,0,20,0" Visibility="Collapsed">
-                </Button>
 
                 <!-- Buttons Container -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="5,5,5,5">
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="5,5,5,5">
                     <Button Name="ThemeButton"
                         Style="{StaticResource HoverButtonStyle}"
                         BorderBrush="Transparent"
