@@ -201,6 +201,10 @@ function Invoke-WPFButtonAction {
             Invoke-WPFUpdatesdisable -Confirmed:$UpdatesDisableConfirmed
         }
         "WPFUpdatessecurity" {Invoke-WPFUpdatessecurity}
+        "WPFActivationMAS" {Invoke-WPFActivationMAS}
+        "WPFActivationStatus" {Invoke-WPFActivationStatus}
+        "WPFSpicetifyInstall" {Invoke-WPFSpicetifyInstall}
+        "WPFSpicetifyMarketplace" {Invoke-WPFSpicetifyMarketplace}
         "WPFGetInstalled" {Invoke-WPFGetInstalled -CheckBox "winget"}
         "WPFGetInstalledTweaks" {Invoke-WPFGetInstalled -CheckBox "tweaks"}
         "WPFAppxRemoval" {

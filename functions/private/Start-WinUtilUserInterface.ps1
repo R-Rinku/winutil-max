@@ -211,7 +211,8 @@ function Start-WinUtilUserInterface {
                 "I" { Invoke-WPFButton "WPFTab1BT"; $keyEventArgs.Handled = $true } # Navigate to Install tab and suppress Windows Warning Sound
                 "T" { Invoke-WPFButton "WPFTab2BT"; $keyEventArgs.Handled = $true } # Navigate to Tweaks tab
                 "C" { Invoke-WPFButton "WPFTab3BT"; $keyEventArgs.Handled = $true } # Navigate to Config tab
-                "U" { Invoke-WPFButton "WPFTab4BT"; $keyEventArgs.Handled = $true } # Navigate to Updates tab
+                "A" { Invoke-WPFButton "WPFTab4BT"; $keyEventArgs.Handled = $true } # Navigate to Activation tab
+                "U" { Invoke-WPFButton "WPFTab4BT"; $keyEventArgs.Handled = $true } # Navigate to Activation tab (legacy shortcut)
                 "W" { Invoke-WPFButton "WPFTab5BT"; $keyEventArgs.Handled = $true } # Navigate to Win11ISO tab
             }
         }
@@ -264,18 +265,21 @@ function Start-WinUtilUserInterface {
         $primaryScreen = [System.Windows.Forms.Screen]::PrimaryScreen
         # Check if the primary screen is found
         if ($primaryScreen) {
-            # Extract screen width and height for the primary monitor
-            $screenWidth = $primaryScreen.Bounds.Width
-            $screenHeight = $primaryScreen.Bounds.Height
+            # Extract usable working area (excluding Windows taskbar)
+            $workingArea = $primaryScreen.WorkingArea
+            $screenWidth = $workingArea.Width
+            $screenHeight = $workingArea.Height
             $sync.Form.MinWidth = [Math]::Min([double]$sync.Form.MinWidth, [double]$screenWidth)
 
-            # Compare with the primary monitor size
-            if ($sync.Form.ActualWidth -gt $screenWidth -or $sync.Form.ActualHeight -gt $screenHeight) {
-                $sync.Form.Left = 0
-                $sync.Form.Top = 0
-                $sync.Form.Width = $screenWidth
-                $sync.Form.Height = $screenHeight
-            }
+            # Ensure compatible sizing: default to comfortable 1200x780 or 95% of working area if smaller
+            $targetWidth = [Math]::Min(1200, [int]($screenWidth * 0.95))
+            $targetHeight = [Math]::Min(780, [int]($screenHeight * 0.92))
+            $sync.Form.Width = [Math]::Max(900, $targetWidth)
+            $sync.Form.Height = [Math]::Max(600, $targetHeight)
+
+            # Center window cleanly on the display working area
+            $sync.Form.Left = [Math]::Max(0, [int]($workingArea.Left + ($screenWidth - $sync.Form.Width) / 2))
+            $sync.Form.Top = [Math]::Max(0, [int]($workingArea.Top + ($screenHeight - $sync.Form.Height) / 2))
         }
 
         if ($PARAM_OFFLINE) {
@@ -358,6 +362,7 @@ function Start-WinUtilUserInterface {
         @{ Name = "WPFSearchChipGames";           Category = "Games" }
         @{ Name = "WPFSearchChipMicrosoftTools";  Category = "Microsoft Tools" }
         @{ Name = "WPFSearchChipMultimediaTools"; Category = "Multimedia Tools" }
+        @{ Name = "WPFSearchChipOffice";           Category = "Office" }
         @{ Name = "WPFSearchChipProTools";        Category = "Pro Tools" }
         @{ Name = "WPFSearchChipSelfhostedTools"; Category = "Selfhosted Tools" }
         @{ Name = "WPFSearchChipUtilities";       Category = "Utilities" }
@@ -372,7 +377,7 @@ function Start-WinUtilUserInterface {
     $sync["Form"].Add_Loaded({
         param($e)
         $null = $e
-        $sync.Form.MinWidth = "1150"
+        $sync.Form.MinWidth = "900"
         $sync["Form"].MaxWidth = [Double]::PositiveInfinity
         $sync["Form"].MaxHeight = [Double]::PositiveInfinity
 

@@ -847,7 +847,7 @@
         "foss": true
     },
     "libreoffice": {
-        "category": "Document",
+        "category": "Office",
         "choco": "libreoffice-fresh",
         "content": "LibreOffice",
         "description": "LibreOffice is a powerful and free office suite, compatible with other major office suites.",
@@ -1133,13 +1133,22 @@
         "foss": false
     },
     "onlyoffice": {
-        "category": "Document",
+        "category": "Office",
         "choco": "onlyoffice",
         "content": "ONLYOFFICE Desktop",
         "description": "ONLYOFFICE Desktop is a comprehensive office suite for document editing and collaboration.",
         "link": "https://www.onlyoffice.com/desktop.aspx",
         "winget": "ONLYOFFICE.DesktopEditors",
         "foss": true
+    },
+    "microsoft365": {
+        "category": "Office",
+        "choco": "office365proplus",
+        "content": "Microsoft 365 (Office)",
+        "description": "Microsoft 365 productivity suite including Word, Excel, PowerPoint, Outlook, and OneNote.",
+        "link": "https://www.office.com/",
+        "winget": "Microsoft.Office",
+        "foss": false
     },
     "OPAutoClicker": {
         "category": "Utilities",
@@ -2118,6 +2127,24 @@
         "description": "WARP is a freemium VPN service provided by Cloudflare. Includes usage of Cloudflare's DNS",
         "content": "Cloudflare WARP",
         "link": "https://one.one.one.one",
+        "foss": false
+    },
+    "windowsapp": {
+        "category": "Office",
+        "choco": "",
+        "content": "Windows App",
+        "description": "Microsoft Windows App - Connect securely to Azure Virtual Desktop, Windows 365, Microsoft Dev Box, and Remote Desktop.",
+        "link": "https://learn.microsoft.com/en-us/windows-app/get-started",
+        "winget": "Microsoft.WindowsApp",
+        "foss": false
+    },
+    "wpsoffice": {
+        "category": "Office",
+        "choco": "wps-office",
+        "content": "WPS Office",
+        "description": "All-in-one free office suite for Word documents, spreadsheets, presentations, and PDF editing.",
+        "link": "https://www.wps.com/",
+        "winget": "Kingsoft.WPSOffice",
         "foss": false
     }
 }

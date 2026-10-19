@@ -2143,6 +2143,9 @@ function Initialize-WinUtilTabContent {
             "Config" {
                 Invoke-WPFUIElements -configVariable $sync.configs.feature -targetGridName "featurespanel" -columncount 2 -Yield:$Yield
             }
+            "Activation" {
+                # Activation tab content is statically defined in XAML
+            }
             "AppX" {
                 Invoke-WPFUIElements -configVariable $sync.configs.appx -targetGridName "appxpanel" -columncount 2 -Yield:$Yield
             }
@@ -7925,7 +7928,8 @@ function Start-WinUtilUserInterface {
                 "I" { Invoke-WPFButton "WPFTab1BT"; $keyEventArgs.Handled = $true } # Navigate to Install tab and suppress Windows Warning Sound
                 "T" { Invoke-WPFButton "WPFTab2BT"; $keyEventArgs.Handled = $true } # Navigate to Tweaks tab
                 "C" { Invoke-WPFButton "WPFTab3BT"; $keyEventArgs.Handled = $true } # Navigate to Config tab
-                "U" { Invoke-WPFButton "WPFTab4BT"; $keyEventArgs.Handled = $true } # Navigate to Updates tab
+                "A" { Invoke-WPFButton "WPFTab4BT"; $keyEventArgs.Handled = $true } # Navigate to Activation tab
+                "U" { Invoke-WPFButton "WPFTab4BT"; $keyEventArgs.Handled = $true } # Navigate to Activation tab (legacy shortcut)
                 "W" { Invoke-WPFButton "WPFTab5BT"; $keyEventArgs.Handled = $true } # Navigate to Win11ISO tab
             }
         }
@@ -7978,18 +7982,21 @@ function Start-WinUtilUserInterface {
         $primaryScreen = [System.Windows.Forms.Screen]::PrimaryScreen
         # Check if the primary screen is found
         if ($primaryScreen) {
-            # Extract screen width and height for the primary monitor
-            $screenWidth = $primaryScreen.Bounds.Width
-            $screenHeight = $primaryScreen.Bounds.Height
+            # Extract usable working area (excluding Windows taskbar)
+            $workingArea = $primaryScreen.WorkingArea
+            $screenWidth = $workingArea.Width
+            $screenHeight = $workingArea.Height
             $sync.Form.MinWidth = [Math]::Min([double]$sync.Form.MinWidth, [double]$screenWidth)
 
-            # Compare with the primary monitor size
-            if ($sync.Form.ActualWidth -gt $screenWidth -or $sync.Form.ActualHeight -gt $screenHeight) {
-                $sync.Form.Left = 0
-                $sync.Form.Top = 0
-                $sync.Form.Width = $screenWidth
-                $sync.Form.Height = $screenHeight
-            }
+            # Ensure compatible sizing: default to comfortable 1200x780 or 95% of working area if smaller
+            $targetWidth = [Math]::Min(1200, [int]($screenWidth * 0.95))
+            $targetHeight = [Math]::Min(780, [int]($screenHeight * 0.92))
+            $sync.Form.Width = [Math]::Max(900, $targetWidth)
+            $sync.Form.Height = [Math]::Max(600, $targetHeight)
+
+            # Center window cleanly on the display working area
+            $sync.Form.Left = [Math]::Max(0, [int]($workingArea.Left + ($screenWidth - $sync.Form.Width) / 2))
+            $sync.Form.Top = [Math]::Max(0, [int]($workingArea.Top + ($screenHeight - $sync.Form.Height) / 2))
         }
 
         if ($PARAM_OFFLINE) {
@@ -8072,6 +8079,7 @@ function Start-WinUtilUserInterface {
         @{ Name = "WPFSearchChipGames";           Category = "Games" }
         @{ Name = "WPFSearchChipMicrosoftTools";  Category = "Microsoft Tools" }
         @{ Name = "WPFSearchChipMultimediaTools"; Category = "Multimedia Tools" }
+        @{ Name = "WPFSearchChipOffice";           Category = "Office" }
         @{ Name = "WPFSearchChipProTools";        Category = "Pro Tools" }
         @{ Name = "WPFSearchChipSelfhostedTools"; Category = "Selfhosted Tools" }
         @{ Name = "WPFSearchChipUtilities";       Category = "Utilities" }
@@ -8086,7 +8094,7 @@ function Start-WinUtilUserInterface {
     $sync["Form"].Add_Loaded({
         param($e)
         $null = $e
-        $sync.Form.MinWidth = "1150"
+        $sync.Form.MinWidth = "900"
         $sync["Form"].MaxWidth = [Double]::PositiveInfinity
         $sync["Form"].MaxHeight = [Double]::PositiveInfinity
 
@@ -9511,6 +9519,58 @@ function Write-WinUtilAutoRunSummary {
     return 0
 }
 
+function Invoke-WPFActivationMAS {
+    <#
+    .SYNOPSIS
+        Launches Microsoft Activation Scripts (MAS) in an interactive elevated PowerShell console.
+    .DESCRIPTION
+        MAS (massgrave.dev) is an open-source Windows and Office activator utilizing HWID, Ohook,
+        and KMS38 activation methods. Running in an interactive window allows the user to
+        select the desired activation method.
+    .LINK
+        https://massgrave.dev/
+    #>
+    [CmdletBinding()]
+    param()
+
+    Write-WinUtilLog -Component "Activation" -Message "Launching Microsoft Activation Scripts (MAS) from massgrave.dev."
+    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Launching Microsoft Activation Scripts (MAS)..." -ForegroundColor Cyan
+
+    try {
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = "powershell.exe"
+        $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command `"irm https://get.activated.win | iex`""
+        $psi.Verb = "runAs"
+        $psi.UseShellExecute = $true
+        [System.Diagnostics.Process]::Start($psi) | Out-Null
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] MAS interactive window launched." -ForegroundColor Green
+        Write-WinUtilLog -Component "Activation" -Message "MAS launched successfully."
+    } catch {
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to launch MAS: $($_.Exception.Message)" -ForegroundColor Red
+        Write-WinUtilLog -Component "Activation" -Message "Failed to launch MAS: $($_.Exception.Message)" -Level "ERROR"
+    }
+}
+
+function Invoke-WPFActivationStatus {
+    <#
+    .SYNOPSIS
+        Checks Windows license and activation expiration status.
+    #>
+    [CmdletBinding()]
+    param()
+
+    Write-WinUtilLog -Component "Activation" -Message "Checking Windows license activation status."
+    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Checking Windows activation status..." -ForegroundColor Cyan
+
+    try {
+        Start-Process -FilePath "slmgr.vbs" -ArgumentList "/xpr"
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Activation status dialog requested." -ForegroundColor Green
+    } catch {
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to query activation status: $($_.Exception.Message)" -ForegroundColor Red
+        Write-WinUtilLog -Component "Activation" -Message "Failed to query activation: $($_.Exception.Message)" -Level "ERROR"
+    }
+}
+
 function Invoke-WPFAppxInstall {
     if ($null -eq $sync.selectedAppx -or $sync.selectedAppx.Count -eq 0) {
         Show-WinUtilMessage -Message "No AppX Package selected" -Title "Error" -Button "OK" -Icon "Error"
@@ -9817,6 +9877,10 @@ function Invoke-WPFButtonAction {
             Invoke-WPFUpdatesdisable -Confirmed:$UpdatesDisableConfirmed
         }
         "WPFUpdatessecurity" {Invoke-WPFUpdatessecurity}
+        "WPFActivationMAS" {Invoke-WPFActivationMAS}
+        "WPFActivationStatus" {Invoke-WPFActivationStatus}
+        "WPFSpicetifyInstall" {Invoke-WPFSpicetifyInstall}
+        "WPFSpicetifyMarketplace" {Invoke-WPFSpicetifyMarketplace}
         "WPFGetInstalled" {Invoke-WPFGetInstalled -CheckBox "winget"}
         "WPFGetInstalledTweaks" {Invoke-WPFGetInstalled -CheckBox "tweaks"}
         "WPFAppxRemoval" {
@@ -11420,6 +11484,75 @@ function Invoke-WPFSmartBulkRename {
     })
 
     $form.ShowDialog() | Out-Null
+}
+
+function Invoke-WPFSpicetifyInstall {
+    <#
+    .SYNOPSIS
+        Installs Spicetify CLI for customizing and modding the Spotify Desktop client.
+    .DESCRIPTION
+        Spicetify (https://spicetify.app/) is a multi-platform command-line tool to customize
+        the official Spotify client, supporting themes, extensions, custom apps, and ad-blocking.
+    .LINK
+        https://spicetify.app/
+    #>
+    [CmdletBinding()]
+    param()
+
+    Write-WinUtilLog -Component "Activation" -Message "Launching Spicetify CLI installation."
+    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Launching Spicetify CLI installation..." -ForegroundColor Cyan
+
+    try {
+        $cmd = "Write-Host '========================================' -ForegroundColor Green; " +
+               "Write-Host '   Installing Spicetify CLI for Spotify' -ForegroundColor Cyan; " +
+               "Write-Host '========================================`n' -ForegroundColor Green; " +
+               "iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex; " +
+               "Write-Host '`n[Done] Press any key to close this window...' -ForegroundColor Yellow; " +
+               "`$null = `$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')"
+
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = "powershell.exe"
+        $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
+        $psi.UseShellExecute = $true
+        [System.Diagnostics.Process]::Start($psi) | Out-Null
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify installation launched." -ForegroundColor Green
+        Write-WinUtilLog -Component "Activation" -Message "Spicetify installer launched successfully."
+    } catch {
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to start Spicetify installer: $($_.Exception.Message)" -ForegroundColor Red
+        Write-WinUtilLog -Component "Activation" -Message "Failed to start Spicetify installer: $($_.Exception.Message)" -Level "ERROR"
+    }
+}
+
+function Invoke-WPFSpicetifyMarketplace {
+    <#
+    .SYNOPSIS
+        Installs Spicetify Marketplace into Spotify for easy downloading of themes and extensions.
+    #>
+    [CmdletBinding()]
+    param()
+
+    Write-WinUtilLog -Component "Activation" -Message "Launching Spicetify Marketplace installation."
+    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Launching Spicetify Marketplace installation..." -ForegroundColor Cyan
+
+    try {
+        $cmd = "Write-Host '============================================' -ForegroundColor Green; " +
+               "Write-Host '   Installing Spicetify Marketplace Extension' -ForegroundColor Cyan; " +
+               "Write-Host '============================================`n' -ForegroundColor Green; " +
+               "iwr -useb https://raw.githubusercontent.com/spicetify/spicetify-marketplace/main/resources/install.ps1 | iex; " +
+               "Write-Host '`n[Done] Press any key to close this window...' -ForegroundColor Yellow; " +
+               "`$null = `$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')"
+
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = "powershell.exe"
+        $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
+        $psi.UseShellExecute = $true
+        [System.Diagnostics.Process]::Start($psi) | Out-Null
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify Marketplace installer launched." -ForegroundColor Green
+        Write-WinUtilLog -Component "Activation" -Message "Spicetify Marketplace installer launched."
+    } catch {
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to start Spicetify Marketplace installer: $($_.Exception.Message)" -ForegroundColor Red
+        Write-WinUtilLog -Component "Activation" -Message "Failed to start Marketplace: $($_.Exception.Message)" -Level "ERROR"
+    }
 }
 
 function Invoke-WPFSSHServer {
@@ -13878,7 +14011,7 @@ $sync.configs.applications = @'
                               "foss":  true
                           },
     "WPFInstalllibreoffice":  {
-                                  "category":  "Document",
+                                  "category":  "Office",
                                   "choco":  "libreoffice-fresh",
                                   "content":  "LibreOffice",
                                   "description":  "LibreOffice is a powerful and free office suite, compatible with other major office suites.",
@@ -14164,7 +14297,7 @@ $sync.configs.applications = @'
                                "foss":  false
                            },
     "WPFInstallonlyoffice":  {
-                                 "category":  "Document",
+                                 "category":  "Office",
                                  "choco":  "onlyoffice",
                                  "content":  "ONLYOFFICE Desktop",
                                  "description":  "ONLYOFFICE Desktop is a comprehensive office suite for document editing and collaboration.",
@@ -14172,6 +14305,15 @@ $sync.configs.applications = @'
                                  "winget":  "ONLYOFFICE.DesktopEditors",
                                  "foss":  true
                              },
+    "WPFInstallmicrosoft365":  {
+                                   "category":  "Office",
+                                   "choco":  "office365proplus",
+                                   "content":  "Microsoft 365 (Office)",
+                                   "description":  "Microsoft 365 productivity suite including Word, Excel, PowerPoint, Outlook, and OneNote.",
+                                   "link":  "https://www.office.com/",
+                                   "winget":  "Microsoft.Office",
+                                   "foss":  false
+                               },
     "WPFInstallOPAutoClicker":  {
                                     "category":  "Utilities",
                                     "choco":  "autoclicker",
@@ -15150,7 +15292,25 @@ $sync.configs.applications = @'
                                      "content":  "Cloudflare WARP",
                                      "link":  "https://one.one.one.one",
                                      "foss":  false
-                                 }
+                                 },
+    "WPFInstallwindowsapp":  {
+                                 "category":  "Office",
+                                 "choco":  "",
+                                 "content":  "Windows App",
+                                 "description":  "Microsoft Windows App - Connect securely to Azure Virtual Desktop, Windows 365, Microsoft Dev Box, and Remote Desktop.",
+                                 "link":  "https://learn.microsoft.com/en-us/windows-app/get-started",
+                                 "winget":  "Microsoft.WindowsApp",
+                                 "foss":  false
+                             },
+    "WPFInstallwpsoffice":  {
+                                "category":  "Office",
+                                "choco":  "wps-office",
+                                "content":  "WPS Office",
+                                "description":  "All-in-one free office suite for Word documents, spreadsheets, presentations, and PDF editing.",
+                                "link":  "https://www.wps.com/",
+                                "winget":  "Kingsoft.WPSOffice",
+                                "foss":  false
+                            }
 }
 '@ | ConvertFrom-Json
 $sync.configs.appnavigation = @'
@@ -17868,9 +18028,9 @@ $inputXML = @'
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
         WindowStyle="SingleBorderWindow"
-        Width="Auto"
-        Height="Auto"
-        MinWidth="800"
+        Width="1200"
+        Height="780"
+        MinWidth="900"
         MinHeight="600"
         Title="winutil-MAX - Running Up That Hill">
     <WindowChrome.WindowChrome>
@@ -18941,7 +19101,7 @@ $inputXML = @'
                     Background="{DynamicResource ButtonUpdatesBackgroundColor}" Foreground="{DynamicResource ButtonUpdatesForegroundColor}" FontWeight="Bold" Name="WPFTab4BT">
                     <ToggleButton.Content>
                         <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonUpdatesForegroundColor}">
-                            <Underline>U</Underline>pdates
+                            <Underline>A</Underline>ctivation
                         </TextBlock>
                     </ToggleButton.Content>
                 </ToggleButton>
@@ -19237,6 +19397,7 @@ $inputXML = @'
                         <ToggleButton Name="WPFSearchChipGames"           Content="Games"             Style="{StaticResource FilterChipToggleStyle}"/>
                         <ToggleButton Name="WPFSearchChipMicrosoftTools"  Content="Microsoft Tools"   Style="{StaticResource FilterChipToggleStyle}"/>
                         <ToggleButton Name="WPFSearchChipMultimediaTools" Content="Multimedia Tools"  Style="{StaticResource FilterChipToggleStyle}"/>
+                        <ToggleButton Name="WPFSearchChipOffice"           Content="Office"            Style="{StaticResource FilterChipToggleStyle}"/>
                         <ToggleButton Name="WPFSearchChipProTools"        Content="Pro Tools"         Style="{StaticResource FilterChipToggleStyle}"/>
                         <ToggleButton Name="WPFSearchChipSelfhostedTools" Content="Selfhosted Tools"  Style="{StaticResource FilterChipToggleStyle}"/>
                         <ToggleButton Name="WPFSearchChipUtilities"       Content="Utilities"         Style="{StaticResource FilterChipToggleStyle}"/>
@@ -19309,12 +19470,162 @@ $inputXML = @'
                 </Grid>
             </TabItem>
             <TabItem Header="Config" Visibility="Collapsed" Name="WPFTab3">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="{DynamicResource TabContentMargin}">
-                    <Grid Name="featurespanel" Grid.Row="1" Background="Transparent">
-                    </Grid>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="{DynamicResource TabContentMargin}">
+                    <StackPanel Background="Transparent">
+                        <Grid Name="featurespanel" Background="Transparent"/>
+
+                        <!-- Windows Update Profiles Section under Config -->
+                        <Border Style="{StaticResource BorderStyle}" Margin="10,20,10,10" Padding="16">
+                            <Grid Background="Transparent" MaxWidth="1250" HorizontalAlignment="Stretch">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Margin="10,4,10,14">
+                                    <TextBlock Text="Windows Update Profiles"
+                                               FontSize="20"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource MainForegroundColor}"/>
+                                    <TextBlock Text="Choose how Windows receives updates. Each profile replaces the Windows Update settings managed by WinUtil."
+                                               Margin="0,4,0,0"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource MainForegroundColor}"/>
+                                </StackPanel>
+
+                                <UniformGrid Grid.Row="1" Columns="3">
+                                    <Border Style="{StaticResource BorderStyle}"
+                                            BorderBrush="{DynamicResource ProgressBarForegroundColor}"
+                                            BorderThickness="2"
+                                            Padding="14"
+                                            Margin="5"
+                                            MinHeight="280">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                                                <TextBlock Text="Recommended"
+                                                           FontSize="18"
+                                                           FontWeight="Bold"
+                                                           Foreground="{DynamicResource MainForegroundColor}"/>
+                                                <TextBlock Text="Balanced security and stability"
+                                                           Margin="0,4,0,0"
+                                                           FontSize="12"
+                                                           Foreground="{DynamicResource MainForegroundColor}"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="1">
+                                                <TextBlock Text="- Defers feature updates for 365 days" TextWrapping="Wrap" Margin="0,0,0,5" Foreground="{DynamicResource MainForegroundColor}"/>
+                                                <TextBlock Text="- Defers quality updates for 4 days" TextWrapping="Wrap" Margin="0,0,0,5" Foreground="{DynamicResource MainForegroundColor}"/>
+                                                <TextBlock Text="- Excludes drivers from quality updates" TextWrapping="Wrap" Margin="0,0,0,5" Foreground="{DynamicResource MainForegroundColor}"/>
+                                                <TextBlock Text="- Notifies when downloaded updates are ready" TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource MainForegroundColor}"/>
+                                                <TextBlock Text="Available on Windows Pro, Enterprise, and Education."
+                                                           FontSize="11"
+                                                           FontStyle="Italic"
+                                                           TextWrapping="Wrap"
+                                                           Foreground="{DynamicResource MainForegroundColor}"/>
+                                            </StackPanel>
+                                            <Button Name="WPFUpdatessecurity"
+                                                    Grid.Row="2"
+                                                    Content="Apply Recommended"
+                                                    FontSize="{DynamicResource ConfigTabButtonFontSize}"
+                                                    Margin="0,12,0,0"
+                                                    Padding="8"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Style="{StaticResource BorderStyle}" Padding="14" Margin="5" MinHeight="280">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                                                <TextBlock Text="Windows Default"
+                                                           FontSize="18"
+                                                           FontWeight="Bold"
+                                                           Foreground="{DynamicResource MainForegroundColor}"/>
+                                                <TextBlock Text="Return control to Windows"
+                                                           Margin="0,4,0,0"
+                                                           FontSize="12"
+                                                           Foreground="{DynamicResource MainForegroundColor}"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="1">
+                                                <TextBlock Text="- Removes Windows Update policies applied by WinUtil" TextWrapping="Wrap" Margin="0,0,0,5" Foreground="{DynamicResource MainForegroundColor}"/>
+                                                <TextBlock Text="- Restores update service startup settings" TextWrapping="Wrap" Margin="0,0,0,5" Foreground="{DynamicResource MainForegroundColor}"/>
+                                                <TextBlock Text="- Re-enables update scheduled tasks" TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource MainForegroundColor}"/>
+                                                <TextBlock Text="Use this to undo Recommended or Disable profile."
+                                                           FontSize="11"
+                                                           FontStyle="Italic"
+                                                           TextWrapping="Wrap"
+                                                           Foreground="{DynamicResource MainForegroundColor}"/>
+                                            </StackPanel>
+                                            <Button Name="WPFUpdatesdefault"
+                                                    Grid.Row="2"
+                                                    Content="Restore Defaults"
+                                                    FontSize="{DynamicResource ConfigTabButtonFontSize}"
+                                                    Margin="0,12,0,0"
+                                                    Padding="8"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Style="{StaticResource BorderStyle}" Padding="14" Margin="5" MinHeight="280">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                                                <TextBlock Text="Disable Updates"
+                                                           FontSize="18"
+                                                           FontWeight="Bold"
+                                                           Foreground="Red"/>
+                                                <TextBlock Text="Advanced use only"
+                                                           Margin="0,4,0,0"
+                                                           FontSize="12"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="Red"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="1">
+                                                <TextBlock Text="- Disables automatic update policy" TextWrapping="Wrap" Margin="0,0,0,5" Foreground="{DynamicResource MainForegroundColor}"/>
+                                                <TextBlock Text="- Stops update services and scheduled tasks" TextWrapping="Wrap" Margin="0,0,0,5" Foreground="{DynamicResource MainForegroundColor}"/>
+                                                <TextBlock Text="- Clears downloaded update files" TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource MainForegroundColor}"/>
+                                                <TextBlock Text="Security updates will not be installed while active."
+                                                           FontSize="11"
+                                                           FontStyle="Italic"
+                                                           TextWrapping="Wrap"
+                                                           Foreground="Red"/>
+                                            </StackPanel>
+                                            <Button Name="WPFUpdatesdisable"
+                                                    Grid.Row="2"
+                                                    Content="Disable Updates"
+                                                    FontSize="{DynamicResource ConfigTabButtonFontSize}"
+                                                    Foreground="Red"
+                                                    Margin="0,12,0,0"
+                                                    Padding="8"/>
+                                        </Grid>
+                                    </Border>
+                                </UniformGrid>
+
+                                <Border Grid.Row="2" Style="{StaticResource BorderStyle}" Margin="5,12,5,4" Padding="10">
+                                    <TextBlock Text="Changes apply system-wide. Restart Windows after switching profiles. Use Restore Defaults to undo WinUtil update policies."
+                                               TextWrapping="Wrap"
+                                               HorizontalAlignment="Center"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource MainForegroundColor}"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
                 </ScrollViewer>
             </TabItem>
-            <TabItem Header="Updates" Visibility="Collapsed" Name="WPFTab4">
+            <TabItem Header="Activation" Visibility="Collapsed" Name="WPFTab4">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="{DynamicResource TabContentMargin}">
                     <Grid Background="Transparent" MaxWidth="1250" HorizontalAlignment="Center">
                         <Grid.RowDefinitions>
@@ -19323,24 +19634,28 @@ $inputXML = @'
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <StackPanel Grid.Row="0" Margin="10,10,10,14">
-                            <TextBlock Text="Windows Update Profiles"
+                        <!-- Header -->
+                        <StackPanel Grid.Row="0" Margin="10,10,10,16">
+                            <TextBlock Text="Activation &amp; Enhancement Utilities"
                                        FontSize="24"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource MainForegroundColor}"/>
-                            <TextBlock Text="Choose how Windows receives updates. Each profile replaces the Windows Update settings managed by WinUtil."
+                            <TextBlock Text="Trusted open-source tools for genuine Windows &amp; Office activation and desktop client enhancements."
                                        Margin="0,6,0,0"
                                        FontSize="13"
                                        TextWrapping="Wrap"
                                        Foreground="{DynamicResource MainForegroundColor}"/>
                         </StackPanel>
 
-                        <UniformGrid Grid.Row="1" Columns="3">
+                        <!-- Cards Grid -->
+                        <UniformGrid Grid.Row="1" Columns="2">
+                            <!-- Microsoft Activation Scripts (MAS) Card -->
                             <Border Style="{StaticResource BorderStyle}"
-                                    BorderBrush="{DynamicResource ProgressBarForegroundColor}"
+                                    BorderBrush="#0078D4"
                                     BorderThickness="2"
-                                    Padding="16"
-                                    MinHeight="300">
+                                    Padding="18"
+                                    Margin="8"
+                                    MinHeight="360">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -19348,114 +19663,105 @@ $inputXML = @'
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <StackPanel Grid.Row="0" Margin="0,0,0,14">
-                                        <TextBlock Text="Recommended"
+                                        <TextBlock Text="Microsoft Activation Scripts (MAS)"
                                                    FontSize="20"
                                                    FontWeight="Bold"
-                                                   Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="Balanced security and stability"
+                                                   Foreground="#0078D4"/>
+                                        <TextBlock Text="massgrave.dev • HWID / Ohook / KMS38"
                                                    Margin="0,4,0,0"
-                                                   FontSize="13"
-                                                   Foreground="{DynamicResource MainForegroundColor}"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Row="1">
-                                        <TextBlock Text="- Defers feature updates for 365 days" TextWrapping="Wrap" Margin="0,0,0,7" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="- Defers quality updates for 4 days" TextWrapping="Wrap" Margin="0,0,0,7" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="- Excludes drivers from quality updates" TextWrapping="Wrap" Margin="0,0,0,7" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="- Notifies when downloaded updates are ready to install" TextWrapping="Wrap" Margin="0,0,0,12" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="Available on Windows Pro, Enterprise, and Education editions."
-                                                   FontSize="11"
-                                                   FontStyle="Italic"
-                                                   TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource MainForegroundColor}"/>
-                                    </StackPanel>
-                                    <Button Name="WPFUpdatessecurity"
-                                            Grid.Row="2"
-                                            Content="Apply Recommended"
-                                            FontSize="{DynamicResource ConfigTabButtonFontSize}"
-                                            Margin="0,16,0,0"
-                                            Padding="10"/>
-                                </Grid>
-                            </Border>
-
-                            <Border Style="{StaticResource BorderStyle}" Padding="16" MinHeight="300">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="*"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-                                    <StackPanel Grid.Row="0" Margin="0,0,0,14">
-                                        <TextBlock Text="Windows Default"
-                                                   FontSize="20"
-                                                   FontWeight="Bold"
-                                                   Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="Return control to Windows"
-                                                   Margin="0,4,0,0"
-                                                   FontSize="13"
-                                                   Foreground="{DynamicResource MainForegroundColor}"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Row="1">
-                                        <TextBlock Text="- Removes Windows Update policies applied by WinUtil" TextWrapping="Wrap" Margin="0,0,0,7" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="- Restores update service startup settings" TextWrapping="Wrap" Margin="0,0,0,7" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="- Re-enables update scheduled tasks" TextWrapping="Wrap" Margin="0,0,0,12" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="Use this to undo the Recommended or Disable profile."
-                                                   FontSize="11"
-                                                   FontStyle="Italic"
-                                                   TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource MainForegroundColor}"/>
-                                    </StackPanel>
-                                    <Button Name="WPFUpdatesdefault"
-                                            Grid.Row="2"
-                                            Content="Restore Defaults"
-                                            FontSize="{DynamicResource ConfigTabButtonFontSize}"
-                                            Margin="0,16,0,0"
-                                            Padding="10"/>
-                                </Grid>
-                            </Border>
-
-                            <Border Style="{StaticResource BorderStyle}" Padding="16" MinHeight="300">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="*"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-                                    <StackPanel Grid.Row="0" Margin="0,0,0,14">
-                                        <TextBlock Text="Disable Updates"
-                                                   FontSize="20"
-                                                   FontWeight="Bold"
-                                                   Foreground="Red"/>
-                                        <TextBlock Text="Advanced use only"
-                                                   Margin="0,4,0,0"
-                                                   FontSize="13"
+                                                   FontSize="12"
                                                    FontWeight="SemiBold"
-                                                   Foreground="Red"/>
+                                                   Foreground="{DynamicResource LinkForegroundColor}"/>
                                     </StackPanel>
                                     <StackPanel Grid.Row="1">
-                                        <TextBlock Text="- Disables automatic update policy" TextWrapping="Wrap" Margin="0,0,0,7" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="- Stops update services and scheduled tasks" TextWrapping="Wrap" Margin="0,0,0,7" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="- Clears downloaded update files" TextWrapping="Wrap" Margin="0,0,0,12" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="Security updates will not be installed while this profile is active."
+                                        <TextBlock Text="The most trusted open-source Windows and Office activator in the world:" TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="• HWID (Digital License): Permanent Windows 10/11 activation linked to your motherboard." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="• Ohook: Permanent Office activation without modifying system files or triggering antivirus." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="• KMS38: Activate Windows Server / Enterprise until year 2038." TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="Command: irm https://get.activated.win | iex"
                                                    FontSize="11"
-                                                   FontStyle="Italic"
-                                                   TextWrapping="Wrap"
-                                                   Foreground="Red"/>
+                                                   FontFamily="Consolas"
+                                                   Padding="6,4"
+                                                   Background="{DynamicResource MainBackgroundColor}"
+                                                   Foreground="{DynamicResource MainForegroundColor}"/>
                                     </StackPanel>
-                                    <Button Name="WPFUpdatesdisable"
-                                            Grid.Row="2"
-                                            Content="Disable Updates"
-                                            FontSize="{DynamicResource ConfigTabButtonFontSize}"
-                                            Foreground="Red"
-                                            Margin="0,16,0,0"
-                                            Padding="10"/>
+                                    <StackPanel Grid.Row="2" Orientation="Vertical" Margin="0,16,0,0">
+                                        <Button Name="WPFActivationMAS"
+                                                Content="Launch MAS (Interactive Menu)"
+                                                FontSize="{DynamicResource ConfigTabButtonFontSize}"
+                                                FontWeight="Bold"
+                                                Background="#0078D4"
+                                                Foreground="White"
+                                                Padding="10"
+                                                Margin="0,0,0,8"/>
+                                        <Button Name="WPFActivationStatus"
+                                                Content="Check Windows Activation Status"
+                                                FontSize="{DynamicResource ConfigTabButtonFontSize}"
+                                                Padding="8"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Spicetify Spotify Mod & Ad-Blocker Card -->
+                            <Border Style="{StaticResource BorderStyle}"
+                                    BorderBrush="#1DB954"
+                                    BorderThickness="2"
+                                    Padding="18"
+                                    Margin="8"
+                                    MinHeight="360">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <StackPanel Grid.Row="0" Margin="0,0,0,14">
+                                        <TextBlock Text="Spicetify CLI &amp; Spotify Mod"
+                                                   FontSize="20"
+                                                   FontWeight="Bold"
+                                                   Foreground="#1DB954"/>
+                                        <TextBlock Text="spicetify.app • Desktop Client Modding &amp; Ad-Free"
+                                                   Margin="0,4,0,0"
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#1DB954"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1">
+                                        <TextBlock Text="Powerful CLI tool to customize the official Spotify Desktop application:" TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="• Full theme engine and custom CSS styling." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="• In-app Marketplace for themes, extensions, and custom apps." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="• Extension support including ad-blockers and audio enhancements." TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="Command: iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex"
+                                                   FontSize="11"
+                                                   FontFamily="Consolas"
+                                                   Padding="6,4"
+                                                   Background="{DynamicResource MainBackgroundColor}"
+                                                   Foreground="{DynamicResource MainForegroundColor}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="2" Orientation="Vertical" Margin="0,16,0,0">
+                                        <Button Name="WPFSpicetifyInstall"
+                                                Content="Install Spicetify CLI"
+                                                FontSize="{DynamicResource ConfigTabButtonFontSize}"
+                                                FontWeight="Bold"
+                                                Background="#1DB954"
+                                                Foreground="Black"
+                                                Padding="10"
+                                                Margin="0,0,0,8"/>
+                                        <Button Name="WPFSpicetifyMarketplace"
+                                                Content="Install Spicetify Marketplace"
+                                                FontSize="{DynamicResource ConfigTabButtonFontSize}"
+                                                Padding="8"/>
+                                    </StackPanel>
                                 </Grid>
                             </Border>
                         </UniformGrid>
 
-                        <Border Grid.Row="2" Style="{StaticResource BorderStyle}" Margin="8,14,8,8" Padding="12">
-                            <TextBlock Text="Changes apply system-wide. Restart Windows after switching profiles. Use Restore Defaults to undo WinUtil update policies."
+                        <!-- Footer Info -->
+                        <Border Grid.Row="2" Style="{StaticResource BorderStyle}" Margin="8,16,8,8" Padding="12">
+                            <TextBlock Text="Note: These scripts are maintained by their respective open-source projects (massgrave.dev and spicetify.app). An active internet connection is required."
                                        TextWrapping="Wrap"
                                        HorizontalAlignment="Center"
+                                       FontSize="12"
                                        Foreground="{DynamicResource MainForegroundColor}"/>
                         </Border>
                     </Grid>

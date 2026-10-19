@@ -37,6 +37,9 @@ function Initialize-WinUtilTabContent {
             "Config" {
                 Invoke-WPFUIElements -configVariable $sync.configs.feature -targetGridName "featurespanel" -columncount 2 -Yield:$Yield
             }
+            "Activation" {
+                # Activation tab content is statically defined in XAML
+            }
             "AppX" {
                 Invoke-WPFUIElements -configVariable $sync.configs.appx -targetGridName "appxpanel" -columncount 2 -Yield:$Yield
             }
