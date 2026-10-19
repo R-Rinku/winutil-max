@@ -26,13 +26,9 @@ function Invoke-WPFSpicetifyInstall {
 
         $arg = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
 
-        $success = Start-WinUtilStandardProcess -FilePath "powershell.exe" -Arguments $arg
-        if ($success) {
-            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify installer launched in standard user shell." -ForegroundColor Green
-            Write-WinUtilLog -Component "Activation" -Message "Spicetify installer launched successfully in standard shell."
-        } else {
-            throw "Could not launch standard process."
-        }
+        Start-Process powershell.exe -ArgumentList $arg -WorkingDirectory $env:USERPROFILE
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify installer launched in user shell." -ForegroundColor Green
+        Write-WinUtilLog -Component "Activation" -Message "Spicetify installer launched successfully."
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to start Spicetify installer: $($_.Exception.Message)" -ForegroundColor Red
         Write-WinUtilLog -Component "Activation" -Message "Failed to start Spicetify installer: $($_.Exception.Message)" -Level "ERROR"
@@ -61,13 +57,9 @@ function Invoke-WPFSpicetifyMarketplace {
 
         $arg = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
 
-        $success = Start-WinUtilStandardProcess -FilePath "powershell.exe" -Arguments $arg
-        if ($success) {
-            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify Marketplace installer launched in standard user shell." -ForegroundColor Green
-            Write-WinUtilLog -Component "Activation" -Message "Spicetify Marketplace installer launched in standard shell."
-        } else {
-            throw "Could not launch standard process."
-        }
+        Start-Process powershell.exe -ArgumentList $arg -WorkingDirectory $env:USERPROFILE
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify Marketplace installer launched in user shell." -ForegroundColor Green
+        Write-WinUtilLog -Component "Activation" -Message "Spicetify Marketplace installer launched."
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to start Spicetify Marketplace installer: $($_.Exception.Message)" -ForegroundColor Red
         Write-WinUtilLog -Component "Activation" -Message "Failed to start Marketplace: $($_.Exception.Message)" -Level "ERROR"

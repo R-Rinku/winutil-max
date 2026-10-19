@@ -201,8 +201,6 @@ function Invoke-WPFButtonAction {
             Invoke-WPFUpdatesdisable -Confirmed:$UpdatesDisableConfirmed
         }
         "WPFUpdatessecurity" {Invoke-WPFUpdatessecurity}
-        "WPFActivationMAS" {Invoke-WPFActivationMAS}
-        "WPFActivationMASCopy" {Invoke-WPFActivationMASCopy}
         "WPFActivationOpenShell" {Invoke-WPFOpenStandardShell}
         "WPFActivationStatus" {Invoke-WPFActivationStatus}
         "WPFSpicetifyInstall" {Invoke-WPFSpicetifyInstall}

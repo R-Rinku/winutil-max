@@ -1642,7 +1642,7 @@
 
                         <!-- Cards Grid (Compact) -->
                         <UniformGrid Grid.Row="1" Columns="2">
-                            <!-- Microsoft Activation Scripts (MAS) Card -->
+                            <!-- Windows Activation Status Card -->
                             <Border Style="{StaticResource BorderStyle}"
                                     BorderBrush="#0078D4"
                                     BorderThickness="1.5"
@@ -1659,11 +1659,11 @@
 
                                     <!-- Title & Subtitle -->
                                     <StackPanel Grid.Row="0" Margin="0,0,0,6">
-                                        <TextBlock Text="Microsoft Activation Scripts (MAS)"
+                                        <TextBlock Text="Windows Activation Status"
                                                    FontSize="14"
                                                    FontWeight="Bold"
                                                    Foreground="#0078D4"/>
-                                        <TextBlock Text="massgrave.dev - Windows &amp; Office HWID / Ohook activation"
+                                        <TextBlock Text="slmgr.vbs /xpr - Query Windows digital license &amp; expiry"
                                                    FontSize="11"
                                                    Foreground="{DynamicResource LinkForegroundColor}"
                                                    Margin="0,1,0,0"/>
@@ -1671,59 +1671,41 @@
 
                                     <!-- Description -->
                                     <TextBlock Grid.Row="1"
-                                               Text="Trusted open-source activator. Runs in standard shell; requests UAC only if permanent HWID is selected."
+                                               Text="Check if your Windows installation is permanently activated via digital license, OEM, or retail entitlement."
                                                TextWrapping="Wrap"
                                                FontSize="11"
                                                Margin="0,0,0,8"
                                                Foreground="{DynamicResource MainForegroundColor}"/>
 
-                                    <!-- Command Box with Copy Button -->
-                                    <Grid Grid.Row="2" Margin="0,0,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0"
-                                                Background="{DynamicResource MainBackgroundColor}"
-                                                BorderBrush="{DynamicResource BorderBrushColor}"
-                                                BorderThickness="1"
-                                                CornerRadius="3"
-                                                Padding="6,4"
-                                                Margin="0,0,4,0">
-                                            <TextBlock Text="irm https://get.activated.win | iex"
-                                                       FontSize="11"
-                                                       FontFamily="Consolas"
-                                                       VerticalAlignment="Center"
-                                                       Foreground="{DynamicResource MainForegroundColor}"/>
-                                        </Border>
-                                        <Button Grid.Column="1"
-                                                Name="WPFActivationMASCopy"
-                                                Content="Copy"
-                                                ToolTip="Copy command to clipboard to run in your own terminal"
-                                                Padding="10,4"
-                                                FontSize="11"/>
-                                    </Grid>
+                                    <!-- Status Info Box -->
+                                    <Border Grid.Row="2"
+                                            Background="{DynamicResource MainBackgroundColor}"
+                                            BorderBrush="{DynamicResource BorderBrushColor}"
+                                            BorderThickness="1"
+                                            CornerRadius="3"
+                                            Padding="6,6"
+                                            Margin="0,0,0,10">
+                                        <TextBlock Text="Native Windows Licensing Service (Software Licensing Management Tool)"
+                                                   FontSize="10.5"
+                                                   FontFamily="Consolas"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource MainForegroundColor}"/>
+                                    </Border>
 
                                     <!-- Action Buttons -->
                                     <WrapPanel Grid.Row="3" Orientation="Horizontal">
-                                        <Button Name="WPFActivationOpenShell"
-                                                Content="Open Standard Terminal"
-                                                ToolTip="Open a standard non-admin PowerShell window"
-                                                FontSize="11"
-                                                Padding="8,5"
-                                                Margin="0,0,6,4"/>
-                                        <Button Name="WPFActivationMAS"
-                                                Content="Run in Standard Shell"
-                                                ToolTip="Launch MAS script directly in a standard shell"
+                                        <Button Name="WPFActivationStatus"
+                                                Content="Check Activation Status"
+                                                ToolTip="Check Windows activation expiration status"
                                                 FontSize="11"
                                                 FontWeight="SemiBold"
                                                 Background="#0078D4"
                                                 Foreground="White"
                                                 Padding="8,5"
                                                 Margin="0,0,6,4"/>
-                                        <Button Name="WPFActivationStatus"
-                                                Content="Check Status"
-                                                ToolTip="Check Windows activation expiration status"
+                                        <Button Name="WPFActivationOpenShell"
+                                                Content="Open Standard Terminal"
+                                                ToolTip="Open a standard non-admin PowerShell window"
                                                 FontSize="11"
                                                 Padding="8,5"
                                                 Margin="0,0,0,4"/>

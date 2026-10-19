@@ -7676,62 +7676,6 @@ function Clear-WinUtilActiveJob {
     }
 }
 
-function Start-WinUtilStandardProcess {
-    <#
-    .SYNOPSIS
-        Launches an interactive process strictly under the standard (non-elevated) desktop user token.
-    .DESCRIPTION
-        From an elevated administrator session, standard Start-Process or Shell.Application creates
-        child processes that inherit the administrator token. This function queries the ShellWindows
-        desktop COM interface (IShellDispatch2 on explorer.exe) to spawn child processes strictly
-        under the interactive user's medium integrity token (IsInRole(Administrator) = False).
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$FilePath,
-
-        [string]$Arguments = "",
-
-        [string]$WorkingDirectory = $env:USERPROFILE
-    )
-
-    # Method 1: Desktop ShellWindows COM dispatch (Guaranteed Medium Integrity / Non-Admin)
-    try {
-        $type = [Type]::GetTypeFromCLSID([Guid]'{9BA05972-F6A8-11CF-A442-00A0C90A8F39}')
-        $sw = [Activator]::CreateInstance($type)
-        $loc = [int]0; $root = [int]0; $hwnd = [int]0
-        $disp = $sw.FindWindowSW([ref]$loc, [ref]$root, 8, [ref]$hwnd, 1)
-        if ($null -ne $disp -and $null -ne $disp.Document -and $null -ne $disp.Document.Application) {
-            $disp.Document.Application.ShellExecute($FilePath, $Arguments, $WorkingDirectory, "open", 1)
-            Write-WinUtilLog -Component "Process" -Message "Launched $FilePath via ShellWindows desktop dispatch (non-elevated)."
-            return $true
-        }
-    } catch {
-        Write-WinUtilLog -Component "Process" -Message "Desktop dispatch failed: $($_.Exception.Message)" -Level "WARN"
-    }
-
-    # Method 2: In-Process Shell.Application COM fallback
-    try {
-        $sh = New-Object -ComObject Shell.Application
-        $sh.ShellExecute($FilePath, $Arguments, $WorkingDirectory, "open", 1)
-        Write-WinUtilLog -Component "Process" -Message "Launched $FilePath via Shell.Application fallback."
-        return $true
-    } catch {
-        Write-WinUtilLog -Component "Process" -Message "Shell.Application fallback failed: $($_.Exception.Message)" -Level "WARN"
-    }
-
-    # Method 3: Direct Start-Process fallback
-    try {
-        Start-Process -FilePath $FilePath -ArgumentList $Arguments -WorkingDirectory $WorkingDirectory
-        Write-WinUtilLog -Component "Process" -Message "Launched $FilePath via Start-Process fallback."
-        return $true
-    } catch {
-        Write-WinUtilLog -Component "Process" -Message "Start-Process fallback failed: $($_.Exception.Message)" -Level "ERROR"
-        return $false
-    }
-}
-
 function Start-WinUtilTabWarmup {
     <#
         .SYNOPSIS
@@ -9585,89 +9529,6 @@ function Write-WinUtilAutoRunSummary {
     return 0
 }
 
-function Invoke-WPFActivationMASCopy {
-    <#
-    .SYNOPSIS
-        Copies the Microsoft Activation Scripts (MAS) command to clipboard.
-    #>
-    [CmdletBinding()]
-    param()
-
-    $cmd = "irm https://get.activated.win | iex"
-    try {
-        Set-Clipboard -Value $cmd
-        Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Copied MAS command to clipboard: $cmd" -ForegroundColor Green
-        Write-WinUtilLog -Component "Activation" -Message "Copied MAS command to clipboard: $cmd"
-        if ($sync.WPFActivationMASCopy) {
-            $sync.WPFActivationMASCopy.Content = "Copied!"
-        }
-    } catch {
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to copy to clipboard: $($_.Exception.Message)" -ForegroundColor Red
-        Write-WinUtilLog -Component "Activation" -Message "Failed to copy to clipboard: $($_.Exception.Message)" -Level "ERROR"
-    }
-}
-
-function Invoke-WPFOpenStandardShell {
-    <#
-    .SYNOPSIS
-        Opens an interactive standard (non-admin / unelevated) PowerShell console.
-    #>
-    [CmdletBinding()]
-    param()
-
-    Write-WinUtilLog -Component "Activation" -Message "Opening standard user PowerShell terminal."
-    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Opening standard user PowerShell terminal..." -ForegroundColor Cyan
-
-    $success = Start-WinUtilStandardProcess -FilePath "powershell.exe" -Arguments "-NoExit"
-    if ($success) {
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Standard user PowerShell terminal opened." -ForegroundColor Green
-        Write-WinUtilLog -Component "Activation" -Message "Standard PowerShell opened."
-    } else {
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to open standard terminal." -ForegroundColor Red
-        Write-WinUtilLog -Component "Activation" -Message "Failed to open standard terminal." -Level "ERROR"
-    }
-}
-
-function Invoke-WPFActivationMAS {
-    <#
-    .SYNOPSIS
-        Launches Microsoft Activation Scripts (MAS) in an interactive standard user console.
-    .DESCRIPTION
-        MAS (massgrave.dev) is an open-source Windows and Office activator utilizing HWID, Ohook,
-        and KMS38 activation methods. Running in a standard shell allows the script to prompt for
-        UAC only if required.
-    .LINK
-        https://massgrave.dev/
-    #>
-    [CmdletBinding()]
-    param()
-
-    Write-WinUtilLog -Component "Activation" -Message "Launching Microsoft Activation Scripts (MAS) in standard user shell."
-    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Launching MAS in standard user shell..." -ForegroundColor Cyan
-
-    try {
-        $cmd = "irm https://get.activated.win | iex"
-        Set-Clipboard -Value $cmd
-
-        $arg = "-NoExit -Command `"Write-Host '=========================================' -ForegroundColor Cyan; " +
-               "Write-Host '  Microsoft Activation Scripts (MAS)' -ForegroundColor Green; " +
-               "Write-Host '  Running in Standard User Shell' -ForegroundColor Gray; " +
-               "Write-Host '=========================================`n' -ForegroundColor Cyan; " +
-               "irm https://get.activated.win | iex`""
-
-        $success = Start-WinUtilStandardProcess -FilePath "powershell.exe" -Arguments $arg
-        if ($success) {
-            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] MAS interactive window launched in standard shell (command also copied to clipboard)." -ForegroundColor Green
-            Write-WinUtilLog -Component "Activation" -Message "MAS launched successfully in standard shell."
-        } else {
-            throw "Could not launch standard process."
-        }
-    } catch {
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to launch MAS: $($_.Exception.Message)" -ForegroundColor Red
-        Write-WinUtilLog -Component "Activation" -Message "Failed to launch MAS: $($_.Exception.Message)" -Level "ERROR"
-    }
-}
-
 function Invoke-WPFActivationStatus {
     <#
     .SYNOPSIS
@@ -9685,6 +9546,27 @@ function Invoke-WPFActivationStatus {
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to query activation status: $($_.Exception.Message)" -ForegroundColor Red
         Write-WinUtilLog -Component "Activation" -Message "Failed to query activation: $($_.Exception.Message)" -Level "ERROR"
+    }
+}
+
+function Invoke-WPFOpenStandardShell {
+    <#
+    .SYNOPSIS
+        Opens an interactive PowerShell console in the user's home directory.
+    #>
+    [CmdletBinding()]
+    param()
+
+    Write-WinUtilLog -Component "Activation" -Message "Opening user PowerShell terminal."
+    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Opening PowerShell terminal in user profile..." -ForegroundColor Cyan
+
+    try {
+        Start-Process powershell.exe -ArgumentList "-NoExit" -WorkingDirectory $env:USERPROFILE
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] PowerShell terminal opened." -ForegroundColor Green
+        Write-WinUtilLog -Component "Activation" -Message "PowerShell opened successfully."
+    } catch {
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to open terminal: $($_.Exception.Message)" -ForegroundColor Red
+        Write-WinUtilLog -Component "Activation" -Message "Failed to open terminal." -Level "ERROR"
     }
 }
 
@@ -9994,8 +9876,6 @@ function Invoke-WPFButtonAction {
             Invoke-WPFUpdatesdisable -Confirmed:$UpdatesDisableConfirmed
         }
         "WPFUpdatessecurity" {Invoke-WPFUpdatessecurity}
-        "WPFActivationMAS" {Invoke-WPFActivationMAS}
-        "WPFActivationMASCopy" {Invoke-WPFActivationMASCopy}
         "WPFActivationOpenShell" {Invoke-WPFOpenStandardShell}
         "WPFActivationStatus" {Invoke-WPFActivationStatus}
         "WPFSpicetifyInstall" {Invoke-WPFSpicetifyInstall}
@@ -11635,13 +11515,9 @@ function Invoke-WPFSpicetifyInstall {
 
         $arg = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
 
-        $success = Start-WinUtilStandardProcess -FilePath "powershell.exe" -Arguments $arg
-        if ($success) {
-            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify installer launched in standard user shell." -ForegroundColor Green
-            Write-WinUtilLog -Component "Activation" -Message "Spicetify installer launched successfully in standard shell."
-        } else {
-            throw "Could not launch standard process."
-        }
+        Start-Process powershell.exe -ArgumentList $arg -WorkingDirectory $env:USERPROFILE
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify installer launched in user shell." -ForegroundColor Green
+        Write-WinUtilLog -Component "Activation" -Message "Spicetify installer launched successfully."
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to start Spicetify installer: $($_.Exception.Message)" -ForegroundColor Red
         Write-WinUtilLog -Component "Activation" -Message "Failed to start Spicetify installer: $($_.Exception.Message)" -Level "ERROR"
@@ -11670,13 +11546,9 @@ function Invoke-WPFSpicetifyMarketplace {
 
         $arg = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
 
-        $success = Start-WinUtilStandardProcess -FilePath "powershell.exe" -Arguments $arg
-        if ($success) {
-            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify Marketplace installer launched in standard user shell." -ForegroundColor Green
-            Write-WinUtilLog -Component "Activation" -Message "Spicetify Marketplace installer launched in standard shell."
-        } else {
-            throw "Could not launch standard process."
-        }
+        Start-Process powershell.exe -ArgumentList $arg -WorkingDirectory $env:USERPROFILE
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify Marketplace installer launched in user shell." -ForegroundColor Green
+        Write-WinUtilLog -Component "Activation" -Message "Spicetify Marketplace installer launched."
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to start Spicetify Marketplace installer: $($_.Exception.Message)" -ForegroundColor Red
         Write-WinUtilLog -Component "Activation" -Message "Failed to start Marketplace: $($_.Exception.Message)" -Level "ERROR"
@@ -19814,7 +19686,7 @@ $inputXML = @'
 
                         <!-- Cards Grid (Compact) -->
                         <UniformGrid Grid.Row="1" Columns="2">
-                            <!-- Microsoft Activation Scripts (MAS) Card -->
+                            <!-- Windows Activation Status Card -->
                             <Border Style="{StaticResource BorderStyle}"
                                     BorderBrush="#0078D4"
                                     BorderThickness="1.5"
@@ -19831,11 +19703,11 @@ $inputXML = @'
 
                                     <!-- Title & Subtitle -->
                                     <StackPanel Grid.Row="0" Margin="0,0,0,6">
-                                        <TextBlock Text="Microsoft Activation Scripts (MAS)"
+                                        <TextBlock Text="Windows Activation Status"
                                                    FontSize="14"
                                                    FontWeight="Bold"
                                                    Foreground="#0078D4"/>
-                                        <TextBlock Text="massgrave.dev - Windows &amp; Office HWID / Ohook activation"
+                                        <TextBlock Text="slmgr.vbs /xpr - Query Windows digital license &amp; expiry"
                                                    FontSize="11"
                                                    Foreground="{DynamicResource LinkForegroundColor}"
                                                    Margin="0,1,0,0"/>
@@ -19843,59 +19715,41 @@ $inputXML = @'
 
                                     <!-- Description -->
                                     <TextBlock Grid.Row="1"
-                                               Text="Trusted open-source activator. Runs in standard shell; requests UAC only if permanent HWID is selected."
+                                               Text="Check if your Windows installation is permanently activated via digital license, OEM, or retail entitlement."
                                                TextWrapping="Wrap"
                                                FontSize="11"
                                                Margin="0,0,0,8"
                                                Foreground="{DynamicResource MainForegroundColor}"/>
 
-                                    <!-- Command Box with Copy Button -->
-                                    <Grid Grid.Row="2" Margin="0,0,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0"
-                                                Background="{DynamicResource MainBackgroundColor}"
-                                                BorderBrush="{DynamicResource BorderBrushColor}"
-                                                BorderThickness="1"
-                                                CornerRadius="3"
-                                                Padding="6,4"
-                                                Margin="0,0,4,0">
-                                            <TextBlock Text="irm https://get.activated.win | iex"
-                                                       FontSize="11"
-                                                       FontFamily="Consolas"
-                                                       VerticalAlignment="Center"
-                                                       Foreground="{DynamicResource MainForegroundColor}"/>
-                                        </Border>
-                                        <Button Grid.Column="1"
-                                                Name="WPFActivationMASCopy"
-                                                Content="Copy"
-                                                ToolTip="Copy command to clipboard to run in your own terminal"
-                                                Padding="10,4"
-                                                FontSize="11"/>
-                                    </Grid>
+                                    <!-- Status Info Box -->
+                                    <Border Grid.Row="2"
+                                            Background="{DynamicResource MainBackgroundColor}"
+                                            BorderBrush="{DynamicResource BorderBrushColor}"
+                                            BorderThickness="1"
+                                            CornerRadius="3"
+                                            Padding="6,6"
+                                            Margin="0,0,0,10">
+                                        <TextBlock Text="Native Windows Licensing Service (Software Licensing Management Tool)"
+                                                   FontSize="10.5"
+                                                   FontFamily="Consolas"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource MainForegroundColor}"/>
+                                    </Border>
 
                                     <!-- Action Buttons -->
                                     <WrapPanel Grid.Row="3" Orientation="Horizontal">
-                                        <Button Name="WPFActivationOpenShell"
-                                                Content="Open Standard Terminal"
-                                                ToolTip="Open a standard non-admin PowerShell window"
-                                                FontSize="11"
-                                                Padding="8,5"
-                                                Margin="0,0,6,4"/>
-                                        <Button Name="WPFActivationMAS"
-                                                Content="Run in Standard Shell"
-                                                ToolTip="Launch MAS script directly in a standard shell"
+                                        <Button Name="WPFActivationStatus"
+                                                Content="Check Activation Status"
+                                                ToolTip="Check Windows activation expiration status"
                                                 FontSize="11"
                                                 FontWeight="SemiBold"
                                                 Background="#0078D4"
                                                 Foreground="White"
                                                 Padding="8,5"
                                                 Margin="0,0,6,4"/>
-                                        <Button Name="WPFActivationStatus"
-                                                Content="Check Status"
-                                                ToolTip="Check Windows activation expiration status"
+                                        <Button Name="WPFActivationOpenShell"
+                                                Content="Open Standard Terminal"
+                                                ToolTip="Open a standard non-admin PowerShell window"
                                                 FontSize="11"
                                                 Padding="8,5"
                                                 Margin="0,0,0,4"/>

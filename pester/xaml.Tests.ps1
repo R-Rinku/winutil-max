@@ -199,7 +199,6 @@ Describe "XAML document" {
             "WPFUpdatesdefault",
             "WPFUpdatessecurity",
             "WPFUpdatesdisable",
-            "WPFActivationMAS",
             "WPFActivationStatus",
             "WPFSpicetifyInstall",
             "WPFSpicetifyMarketplace",
