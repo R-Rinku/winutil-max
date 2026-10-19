@@ -86,6 +86,7 @@ function Start-WinUtilJob {
     try {
         $timingStartIndex = if ($sync.StepTimings) { $sync.StepTimings.Count } else { 0 }
 
+        $sync.CancelRequested = $false
         Write-WinUtilLog -Component $Name -Message "$Name job started."
         Write-WinUtilJobBanner -Message $label
         Step-WinUtilJob -Status "$label..." -Percent 0 -State "Normal" -Overlay "logo"
@@ -151,6 +152,11 @@ function Start-WinUtilJob {
                 Write-WinUtilJobBanner -Message "$JobLabel finished"
                 Step-WinUtilJob -Status "$JobName finished" -Percent 100 -State "None" -Overlay "checkmark"
             }
+        } catch [System.OperationCanceledException] {
+            $jobClock.Stop()
+            Write-WinUtilLog -Component $JobName -Message "$JobName was cancelled after $($jobClock.ElapsedMilliseconds) ms."
+            Write-WinUtilJobBanner -Message "$JobLabel was cancelled"
+            Step-WinUtilJob -Status "$JobName cancelled" -Percent 100 -State "Paused" -Overlay "warning"
         } catch {
             $jobClock.Stop()
             # A leaf that logs before rethrowing marks that exact exception. Preserve the outer

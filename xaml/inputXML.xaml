@@ -2245,15 +2245,17 @@
         </TabControl>
 
         <!-- Window-level progress indicator - visible regardless of active tab -->
-        <Border Name="WPFTweaksProgressBar" Grid.Row="3" Background="{DynamicResource MainBackgroundColor}" Visibility="Collapsed" Padding="10,6">
+        <Border Name="WPFTweaksProgressBar" Grid.Row="3" Background="{DynamicResource MainBackgroundColor}" Visibility="Collapsed" Padding="12,6">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Orientation="Vertical">
+                <StackPanel Grid.Column="0" Orientation="Vertical" VerticalAlignment="Center" Margin="0,0,10,0">
                     <TextBlock Name="WPFTweaksProgressLabel" Text="" Foreground="{DynamicResource MainForegroundColor}" FontSize="13" Background="Transparent" Margin="0,0,0,4"/>
-                    <ProgressBar Name="WPFTweaksProgressValue" Height="6" Minimum="0" Maximum="100" Value="0" Style="{StaticResource RoundedProgressBarStyle}"/>
+                    <ProgressBar Name="WPFTweaksProgressValue" Height="8" Minimum="0" Maximum="100" Value="0" Style="{StaticResource RoundedProgressBarStyle}"/>
                 </StackPanel>
+                <Button Name="WPFCancelJob" Grid.Column="1" Content=" Cancel " Margin="6,0,0,0" Padding="14,4" Height="28" VerticalAlignment="Center" Foreground="#FFFFFF" Background="#DC2626" BorderThickness="0" Cursor="Hand" FontWeight="SemiBold" ToolTip="Cancel the currently running operation"/>
             </Grid>
         </Border>
     </Grid>

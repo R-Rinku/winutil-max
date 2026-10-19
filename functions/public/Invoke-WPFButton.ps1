@@ -188,6 +188,12 @@ function Invoke-WPFButtonAction {
             Write-WinUtilLog -Component "Tweaks" -Message "User clicked Cancel Tweaks."
             Step-WinUtilJob -Status "Cancelling tweaks..."
         }
+        "WPFCancelJob" {
+            $sync.CancelRequested = $true
+            Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [CANCEL] Cancellation requested by user..." -ForegroundColor Yellow
+            Write-WinUtilLog -Component "Job" -Message "User clicked Cancel on progress bar."
+            Step-WinUtilJob -Status "Cancelling operation..."
+        }
         "WPFUpdatesdefault" {Invoke-WPFUpdatesdefault}
         "WPFUpdatesdisable" {
             if ($sync.EnterpriseMode) {

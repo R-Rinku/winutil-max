@@ -40,6 +40,10 @@ function Step-WinUtilJob {
         [switch]$Hide
     )
 
+    if ($sync.CancelRequested -and $global:WinUtilIsJobWorker) {
+        throw [System.OperationCanceledException]::new("Operation cancelled by user.")
+    }
+
     # With no window every update is thrown away, and a window closed over running work counts
     # as none: its dispatcher accepts posts and discards them. The console is what is left.
     if (-not (Test-WinUtilUIAlive)) {
