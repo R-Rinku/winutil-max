@@ -149,6 +149,12 @@ Describe "XAML document" {
         $script:xaml.DocumentElement.LocalName | Should -Be "Window"
     }
 
+    It "parses inputXML.xaml with XamlReader without error" {
+        Add-Type -AssemblyName PresentationFramework
+        $reader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($script:xamlText))
+        { [Windows.Markup.XamlReader]::Load($reader) } | Should -Not -Throw
+    }
+
     It "contains expected core controls" {
         $xamlNames = @(Get-WinUtilXamlRuntimeNamedControls | ForEach-Object { $_.Name })
         $requiredControls = @(

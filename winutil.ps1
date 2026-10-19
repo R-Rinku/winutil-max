@@ -20672,7 +20672,6 @@ $inputXML = @'
                            FontWeight="Black"
                            FontSize="34"
                            Foreground="#FF2A3A"
-                           LetterSpacing="4"
                            HorizontalAlignment="Center">
                     <TextBlock.Effect>
                         <DropShadowEffect Color="#FF1824" BlurRadius="22" ShadowDepth="0" Opacity="1.0"/>
@@ -20684,7 +20683,6 @@ $inputXML = @'
                                FontSize="12"
                                FontWeight="Bold"
                                Foreground="#FF5565"
-                               LetterSpacing="3"
                                HorizontalAlignment="Center"/>
                 </Border>
             </StackPanel>
@@ -20706,7 +20704,6 @@ $inputXML = @'
                                FontWeight="Black"
                                FontSize="22"
                                Foreground="#FF2A3A"
-                               LetterSpacing="3"
                                HorizontalAlignment="Center"
                                Margin="0,0,0,12">
                         <TextBlock.Effect>
