@@ -41,8 +41,6 @@ function Invoke-WPFButton {
     # Feature installation owns its selection validation and snapshots the selection before it
     $isConfigWork = $featureEntry -and $Button -ne "WPFFeatureInstall" -and
         $Button -ne "WPFFixesSmartBulkRename" -and
-        $Button -ne "WPFTakeOwnershipAdd" -and
-        $Button -ne "WPFTakeOwnershipRemove" -and
         ($Button -notlike "WPFPanel*" -or $featureEntry.function)
 
     if ($isConfigWork -or $workButtons -contains $Button) {
