@@ -56,6 +56,7 @@ Function Install-WinUtilProgramWinget {
         }
 
         Write-WinUtilLog -Component "Package" -Message "$Action winget package: $program (source: $source)"
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> $Action $program via WinGet..." -ForegroundColor Cyan
 
         $outcome = "Failed"
         $detail = "no result"
@@ -99,6 +100,14 @@ Function Install-WinUtilProgramWinget {
             # The client module reports the same failure as a bare HRESULT, so the hex form and
             # Microsoft's own list serve both paths
             $detail = "WinGet reported 0x{0:X8}. See https://learn.microsoft.com/windows/package-manager/winget/returnCodes" -f $exitCode
+        }
+
+        if ($outcome -eq "Succeeded") {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] $program ($detail)" -ForegroundColor Green
+        } elseif ($outcome -eq "Skipped") {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [INFO] $program ($detail)" -ForegroundColor Yellow
+        } else {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [FAILED] $program ($detail)" -ForegroundColor Red
         }
 
         $level = if ($outcome -eq "Failed") { "ERROR" } else { "INFO" }

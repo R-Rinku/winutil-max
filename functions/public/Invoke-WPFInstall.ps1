@@ -40,9 +40,28 @@ function Invoke-WPFInstall {
                 $position = $completedPackages + 1
                 Step-WinUtilJob -Status "Installing $program ($position/$totalPackages)" -Percent ([int](($completedPackages / $totalPackages) * 100))
 
-                $results += Measure-WinUtilStep -Scope "Install" -Name "winget $program" -ScriptBlock {
+                $stepResult = Measure-WinUtilStep -Scope "Install" -Name "winget $program" -ScriptBlock {
                     Install-WinUtilProgramWinget -Action Install -Programs @($program)
                 }
+
+                # SMART BACKUP: If WinGet failed, attempt Chocolatey fallback if available
+                $failedItem = @($stepResult | Where-Object { $_.Outcome -eq "Failed" })
+                if ($failedItem.Count -gt 0) {
+                    $matchingApp = @($PackagesToInstall | Where-Object { $_.winget -eq $program })[0]
+                    if ($matchingApp -and -not [string]::IsNullOrWhiteSpace($matchingApp.choco) -and $matchingApp.choco -ne "na") {
+                        $chocoBackupId = $matchingApp.choco
+                        Write-Host "[winutil-MAX] [BACKUP] WinGet failed for $program. Attempting Chocolatey fallback: $chocoBackupId..." -ForegroundColor Yellow
+                        Step-WinUtilJob -Status "WinGet failed for $program. Retrying with Chocolatey ($chocoBackupId)..."
+                        Install-WinUtilChoco
+                        $chocoBackupRes = Install-WinUtilProgramChoco -Action Install -Programs @($chocoBackupId)
+                        if (@($chocoBackupRes | Where-Object { $_.Outcome -eq "Succeeded" }).Count -gt 0) {
+                            Write-Host "[winutil-MAX] [BACKUP SUCCESS] Successfully installed $program using Chocolatey!" -ForegroundColor Green
+                            $stepResult = $chocoBackupRes
+                        }
+                    }
+                }
+
+                $results += $stepResult
                 $completedPackages++
                 Step-WinUtilJob -Status "Installed $program ($completedPackages/$totalPackages)" -Percent ([int](($completedPackages / $totalPackages) * 100))
             }

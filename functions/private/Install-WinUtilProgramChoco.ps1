@@ -59,6 +59,7 @@ function Install-WinUtilProgramChoco {
         }
 
         Write-WinUtilLog -Component "Package" -Message "$Action choco package: $program"
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> $Action $program via Chocolatey..." -ForegroundColor Cyan
 
         # --no-progress stops choco redrawing a percentage line that only makes sense on a
         # console nobody is watching
@@ -86,6 +87,14 @@ function Install-WinUtilProgramChoco {
         } else {
             $outcome = "Failed"
             $detail = if ($exitCode -eq -1) { "Chocolatey command did not start" } else { "exit code $exitCode" }
+        }
+
+        if ($outcome -eq "Succeeded") {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] $program ($detail)" -ForegroundColor Green
+        } elseif ($outcome -eq "Skipped") {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [INFO] $program ($detail)" -ForegroundColor Yellow
+        } else {
+            Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [FAILED] $program via Chocolatey ($detail)" -ForegroundColor Red
         }
 
         $level = if ($outcome -eq "Failed") { "ERROR" } else { "INFO" }
