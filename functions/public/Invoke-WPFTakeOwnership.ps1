@@ -21,7 +21,7 @@ function Invoke-WPFTakeOwnershipAdd {
 
         $fileCmdKey = "$fileKey\command"
         New-Item -Path $fileCmdKey -Force | Out-Null
-        $fileCmd = 'powershell.exe -NoProfile -WindowStyle Hidden -Command "Start-Process cmd.exe -ArgumentList ''/c takeown /f \""%1\"" && icacls \""%1\"" /grant *S-1-3-4:F /t /c /l'' -Verb runAs"'
+        $fileCmd = 'powershell.exe -NoProfile -WindowStyle Hidden -Command "Start-Process cmd.exe -ArgumentList ''/c takeown /f \"%1\" && icacls \"%1\" /grant *S-1-3-4:F /t /c /l'' -Verb runAs"'
         Set-ItemProperty -Path $fileCmdKey -Name "(Default)" -Value $fileCmd
         Set-ItemProperty -Path $fileCmdKey -Name "IsolatedCommand" -Value $fileCmd
 
@@ -37,7 +37,7 @@ function Invoke-WPFTakeOwnershipAdd {
 
         $dirCmdKey = "$dirKey\command"
         New-Item -Path $dirCmdKey -Force | Out-Null
-        $dirCmd = 'powershell.exe -NoProfile -WindowStyle Hidden -Command "Start-Process cmd.exe -ArgumentList ''/c takeown /f \""%1\"" /r /d y && icacls \""%1\"" /grant *S-1-3-4:F /t /c /l /q'' -Verb runAs"'
+        $dirCmd = 'powershell.exe -NoProfile -WindowStyle Hidden -Command "Start-Process cmd.exe -ArgumentList ''/c takeown /f \"%1\" /r /d y && icacls \"%1\" /grant *S-1-3-4:F /t /c /l /q'' -Verb runAs"'
         Set-ItemProperty -Path $dirCmdKey -Name "(Default)" -Value $dirCmd
         Set-ItemProperty -Path $dirCmdKey -Name "IsolatedCommand" -Value $dirCmd
 
@@ -53,18 +53,17 @@ function Invoke-WPFTakeOwnershipAdd {
 
         $driveCmdKey = "$driveKey\command"
         New-Item -Path $driveCmdKey -Force | Out-Null
-        $driveCmd = 'cmd.exe /c takeown /f "%1\" /r /d y && icacls "%1\" /grant *S-1-3-4:F /t /c'
+        $driveCmd = 'cmd.exe /c takeown /f "%1" /r /d y && icacls "%1" /grant *S-1-3-4:F /t /c'
         Set-ItemProperty -Path $driveCmdKey -Name "(Default)" -Value $driveCmd
         Set-ItemProperty -Path $driveCmdKey -Name "IsolatedCommand" -Value $driveCmd
 
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] 'Take Full Ownership' added to right-click context menu." -ForegroundColor Green
         Write-WinUtilLog -Component "Config" -Message "Take Full Ownership added to context menu successfully."
         Step-WinUtilJob -Status "'Take Full Ownership' added to context menu" -Percent 100
-        Show-WinUtilMessage -Message "'Take Full Ownership' has been added to your right-click context menu." -Title "Take Full Ownership Added" -Button "OK" -Icon "Information" | Out-Null
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to add Take Full Ownership: $($_.Exception.Message)" -ForegroundColor Red
-        Write-WinUtilLog -Component "Config" -Message "Failed to add Take Full Ownership: $($_.Exception.Message)" -Severity "Error"
-        Show-WinUtilMessage -Message "Failed to add Take Full Ownership:`n$($_.Exception.Message)" -Title "Error" -Button "OK" -Icon "Error" | Out-Null
+        Write-WinUtilLog -Component "Config" -Message "Failed to add Take Full Ownership: $($_.Exception.Message)" -Level "ERROR"
+        Step-WinUtilJob -Status "Failed to add Take Full Ownership" -Percent 100 -State "Error"
     }
 }
 
@@ -89,10 +88,12 @@ function Invoke-WPFTakeOwnershipRemove {
             }
         }
 
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] 'Take Full Ownership' removed from right-click context menu." -ForegroundColor Green
         Write-WinUtilLog -Component "Config" -Message "Take Full Ownership removed from context menu."
-        Show-WinUtilMessage -Message "'Take Full Ownership' has been removed from your right-click context menu." -Title "Take Full Ownership Removed" -Button "OK" -Icon "Information" | Out-Null
+        Step-WinUtilJob -Status "'Take Full Ownership' removed from context menu" -Percent 100
     } catch {
-        Write-WinUtilLog -Component "Config" -Message "Failed to remove Take Full Ownership: $($_.Exception.Message)" -Severity "Error"
-        Show-WinUtilMessage -Message "Failed to remove Take Full Ownership:`n$($_.Exception.Message)" -Title "Error" -Button "OK" -Icon "Error" | Out-Null
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to remove Take Full Ownership: $($_.Exception.Message)" -ForegroundColor Red
+        Write-WinUtilLog -Component "Config" -Message "Failed to remove Take Full Ownership: $($_.Exception.Message)" -Level "ERROR"
+        Step-WinUtilJob -Status "Failed to remove Take Full Ownership" -Percent 100 -State "Error"
     }
 }

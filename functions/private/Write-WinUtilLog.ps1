@@ -90,8 +90,12 @@ function Write-WinUtilLog {
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
         $line = "[$timestamp] [$Level] [$Component] $Message"
 
+        $isInternalProfiling = $Level -eq "DEBUG" -or ($Message -like "timing:*") -or ($Message -like "timing summary:*")
+
         if (-not [string]::IsNullOrWhiteSpace($transcriptPath) -and $logPath -eq $transcriptPath) {
-            Write-Host $line
+            if (-not $isInternalProfiling) {
+                Write-Host $line
+            }
             return
         }
 
@@ -108,13 +112,13 @@ function Write-WinUtilLog {
             if (-not $held) {
                 # Writing anyway is what interleaves lines, and the wait only times out when
                 # contention is at its worst
-                Write-Host $line
+                if (-not $isInternalProfiling) { Write-Host $line }
                 return
             }
 
             Add-Content -Path $logPath -Value $line -Encoding UTF8 -ErrorAction Stop
         } catch [System.IO.IOException] {
-            Write-Host $line
+            if (-not $isInternalProfiling) { Write-Host $line }
         } finally {
             if ($held) { $mutex.ReleaseMutex() }
             $mutex.Dispose()

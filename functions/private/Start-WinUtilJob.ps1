@@ -206,6 +206,25 @@ function Start-WinUtilJob {
                     # Dispatcher shutdown can race the alive check and abort the restore call.
                     # The worker is still finished, so its slot must always be released.
                     $null = Clear-WinUtilActiveJob -Token $JobToken
+
+                    # Auto-hide progress bar 3 seconds after job finishes so it does not linger indefinitely
+                    try {
+                        if (Test-WinUtilUIAlive) {
+                            Invoke-WPFUIThread -Async -ScriptBlock {
+                                $timer = New-Object System.Windows.Threading.DispatcherTimer
+                                $timer.Interval = [TimeSpan]::FromSeconds(3)
+                                $timer.Add_Tick({
+                                    $this.Stop()
+                                    if ($null -eq $sync.ActiveJob -and (Test-WinUtilUIAlive)) {
+                                        Step-WinUtilJob -Hide
+                                    }
+                                })
+                                $timer.Start()
+                            }
+                        }
+                    } catch {
+                        # Dispatcher shutdown can race the alive check; ignore safely
+                    }
                 }
             } else {
                 Write-WinUtilLog -Level "WARN" -Component $JobName -Message "$JobName unwound after another job had started; leaving its state alone."

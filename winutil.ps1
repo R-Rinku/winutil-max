@@ -6016,15 +6016,19 @@ function Remove-WinUtilAPPX {
     # We explicitly loop through packages instead of using the pipeline because PowerShell 7 pipeline binding
     # for Remove-AppxPackage fails silently, and Get-AppxPackage -AllUsers returns duplicate objects for each user profile.
     $pkgs = Get-AppxPackage "*$Name*" -AllUsers | Sort-Object -Property PackageFullName -Unique
-    if ($null -ne $pkgs) {
+    if ($null -ne $pkgs -and @($pkgs).Count -gt 0) {
         foreach ($pkg in $pkgs) {
             try {
                 Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction Stop
+                Write-Host "  [OK] Removed $($pkg.PackageFullName)" -ForegroundColor Green
             }
             catch {
+                Write-Host "  [WARNING] Could not remove $($pkg.PackageFullName): $($_.Exception.Message)" -ForegroundColor Yellow
                 Write-WinUtilLog -Level "ERROR" -Component "AppX" -Message "Failed to remove AppX package $($pkg.PackageFullName): $($_.Exception.Message)"
             }
         }
+    } else {
+        Write-Host "  [INFO] $Name is not currently installed." -ForegroundColor DarkGray
     }
 
     Write-WinUtilLog -Component "AppX" -Message "AppX removal completed for package pattern: $Name"
@@ -6083,7 +6087,7 @@ function Remove-WinUtilProvisionedAPPX {
     }
 
     $removalOutput = powershell.exe -NoProfile -NonInteractive -Command $ps5Command -args $PackageList 2>&1
-    if ($LASTEXITCODE -ne 0 -or $null -ne $removalOutput) {
+    if ($LASTEXITCODE -ne 0) {
         $failureDetails = ($removalOutput | Out-String).Trim()
         $errorMessage = "AppX provisioned package removal failed: $failureDetails"
         Write-WinUtilLog -Level "ERROR" -Component "AppX" -Message $errorMessage
@@ -6117,7 +6121,10 @@ function Reset-WPFCheckBoxes {
         [Parameter(position=1)]
         [string]$checkboxfilterpattern = "**"
     )
-    $selectedSet = [System.Collections.Generic.HashSet[string]]::new([string[]]@($sync.selectedApps + $sync.selectedTweaks + $sync.selectedFeatures + $sync.selectedAppx), [StringComparer]::OrdinalIgnoreCase)
+    $prevImport = $sync.ImportInProgress
+    $sync.ImportInProgress = $true
+    try {
+        $selectedSet = [System.Collections.Generic.HashSet[string]]::new([string[]]@($sync.selectedApps + $sync.selectedTweaks + $sync.selectedFeatures + $sync.selectedAppx), [StringComparer]::OrdinalIgnoreCase)
 
     # A synchronized Hashtable protects individual operations, not enumeration. Materialize the
     # snapshot under its lock, then release it before handlers run and mutate $sync.
@@ -6164,6 +6171,9 @@ function Reset-WPFCheckBoxes {
             # their current UI state already reflects the real system state.
         }
     }
+} finally {
+    $sync.ImportInProgress = $prevImport
+}
 }
 
 function Save-WinUtilFile {
@@ -7467,6 +7477,7 @@ function Start-WinUtilJob {
     try {
         $timingStartIndex = if ($sync.StepTimings) { $sync.StepTimings.Count } else { 0 }
 
+        $sync.CancelRequested = $false
         Write-WinUtilLog -Component $Name -Message "$Name job started."
         Write-WinUtilJobBanner -Message $label
         Step-WinUtilJob -Status "$label..." -Percent 0 -State "Normal" -Overlay "logo"
@@ -7532,6 +7543,11 @@ function Start-WinUtilJob {
                 Write-WinUtilJobBanner -Message "$JobLabel finished"
                 Step-WinUtilJob -Status "$JobName finished" -Percent 100 -State "None" -Overlay "checkmark"
             }
+        } catch [System.OperationCanceledException] {
+            $jobClock.Stop()
+            Write-WinUtilLog -Component $JobName -Message "$JobName was cancelled after $($jobClock.ElapsedMilliseconds) ms."
+            Write-WinUtilJobBanner -Message "$JobLabel was cancelled"
+            Step-WinUtilJob -Status "$JobName cancelled" -Percent 100 -State "Paused" -Overlay "warning"
         } catch {
             $jobClock.Stop()
             # A leaf that logs before rethrowing marks that exact exception. Preserve the outer
@@ -7581,6 +7597,25 @@ function Start-WinUtilJob {
                     # Dispatcher shutdown can race the alive check and abort the restore call.
                     # The worker is still finished, so its slot must always be released.
                     $null = Clear-WinUtilActiveJob -Token $JobToken
+
+                    # Auto-hide progress bar 3 seconds after job finishes so it does not linger indefinitely
+                    try {
+                        if (Test-WinUtilUIAlive) {
+                            Invoke-WPFUIThread -Async -ScriptBlock {
+                                $timer = New-Object System.Windows.Threading.DispatcherTimer
+                                $timer.Interval = [TimeSpan]::FromSeconds(3)
+                                $timer.Add_Tick({
+                                    $this.Stop()
+                                    if ($null -eq $sync.ActiveJob -and (Test-WinUtilUIAlive)) {
+                                        Step-WinUtilJob -Hide
+                                    }
+                                })
+                                $timer.Start()
+                            }
+                        }
+                    } catch {
+                        # Dispatcher shutdown can race the alive check; ignore safely
+                    }
                 }
             } else {
                 Write-WinUtilLog -Level "WARN" -Component $JobName -Message "$JobName unwound after another job had started; leaving its state alone."
@@ -8262,6 +8297,10 @@ function Step-WinUtilJob {
         [string]$Overlay,
         [switch]$Hide
     )
+
+    if ($sync.CancelRequested -and $global:WinUtilIsJobWorker) {
+        throw [System.OperationCanceledException]::new("Operation cancelled by user.")
+    }
 
     # With no window every update is thrown away, and a window closed over running work counts
     # as none: its dispatcher accepts posts and discards them. The console is what is left.
@@ -9152,8 +9191,12 @@ function Write-WinUtilLog {
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
         $line = "[$timestamp] [$Level] [$Component] $Message"
 
+        $isInternalProfiling = $Level -eq "DEBUG" -or ($Message -like "timing:*") -or ($Message -like "timing summary:*")
+
         if (-not [string]::IsNullOrWhiteSpace($transcriptPath) -and $logPath -eq $transcriptPath) {
-            Write-Host $line
+            if (-not $isInternalProfiling) {
+                Write-Host $line
+            }
             return
         }
 
@@ -9170,13 +9213,13 @@ function Write-WinUtilLog {
             if (-not $held) {
                 # Writing anyway is what interleaves lines, and the wait only times out when
                 # contention is at its worst
-                Write-Host $line
+                if (-not $isInternalProfiling) { Write-Host $line }
                 return
             }
 
             Add-Content -Path $logPath -Value $line -Encoding UTF8 -ErrorAction Stop
         } catch [System.IO.IOException] {
-            Write-Host $line
+            if (-not $isInternalProfiling) { Write-Host $line }
         } finally {
             if ($held) { $mutex.ReleaseMutex() }
             $mutex.Dispose()
@@ -9614,6 +9657,8 @@ function Invoke-WPFButton {
     # Feature installation owns its selection validation and snapshots the selection before it
     $isConfigWork = $featureEntry -and $Button -ne "WPFFeatureInstall" -and
         $Button -ne "WPFFixesSmartBulkRename" -and
+        $Button -ne "WPFTakeOwnershipAdd" -and
+        $Button -ne "WPFTakeOwnershipRemove" -and
         ($Button -notlike "WPFPanel*" -or $featureEntry.function)
 
     if ($isConfigWork -or $workButtons -contains $Button) {
@@ -9753,6 +9798,18 @@ function Invoke-WPFButtonAction {
         "WPFAddUltPerf" {Invoke-WPFUltimatePerformance -Enable}
         "WPFRemoveUltPerf" {Invoke-WPFUltimatePerformance}
         "WPFundoall" {Invoke-WPFundoall}
+        "WPFCancelTweaks" {
+            $sync.CancelRequested = $true
+            Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [CANCEL] Cancellation requested by user..." -ForegroundColor Yellow
+            Write-WinUtilLog -Component "Tweaks" -Message "User clicked Cancel Tweaks."
+            Step-WinUtilJob -Status "Cancelling tweaks..."
+        }
+        "WPFCancelJob" {
+            $sync.CancelRequested = $true
+            Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [CANCEL] Cancellation requested by user..." -ForegroundColor Yellow
+            Write-WinUtilLog -Component "Job" -Message "User clicked Cancel on progress bar."
+            Step-WinUtilJob -Status "Cancelling operation..."
+        }
         "WPFUpdatesdefault" {Invoke-WPFUpdatesdefault}
         "WPFUpdatesdisable" {
             if ($sync.EnterpriseMode) {
@@ -10333,15 +10390,16 @@ function Invoke-WPFImpex {
 
     function ConfigDialog {
         if (!$Config) {
-            switch ($type) {
-                "export" { $FileBrowser = New-Object System.Windows.Forms.SaveFileDialog }
-                "import" { $FileBrowser = New-Object System.Windows.Forms.OpenFileDialog }
+            # Use native WPF dialogs to avoid WinForms modal unresponsiveness
+            $FileBrowser = switch ($type) {
+                "export" { New-Object Microsoft.Win32.SaveFileDialog }
+                "import" { New-Object Microsoft.Win32.OpenFileDialog }
             }
             $FileBrowser.InitialDirectory = [Environment]::GetFolderPath('Desktop')
             $FileBrowser.Filter = "JSON Files (*.json)|*.json"
-            $FileBrowser.ShowDialog() | Out-Null
+            $dialogResult = if ($sync.Form) { $FileBrowser.ShowDialog($sync.Form) } else { $FileBrowser.ShowDialog() }
 
-            if ($FileBrowser.FileName -eq "") {
+            if ($dialogResult -ne $true -or [string]::IsNullOrWhiteSpace($FileBrowser.FileName)) {
                 return $null
             } else {
                 return $FileBrowser.FileName
@@ -10365,13 +10423,15 @@ function Invoke-WPFImpex {
                     }
                     $jsonFile = $allConfs | ConvertTo-Json
                     $jsonFile | Out-File $Config -Force
-                    "iex ""& { `$(irm https://christitus.com/win) } -Config '$Config'""" | Set-Clipboard
+                    "iex ""& { `$(irm https://rinkurapria.dev/win) } -Config '$Config'""" | Set-Clipboard
                 }
             } catch {
                 Write-Error "An error occurred while exporting: $_"
             }
         }
         "import" {
+            $prevImport = $sync.ImportInProgress
+            $sync.ImportInProgress = $true
             try {
                 $Config = ConfigDialog
                 if ($Config) {
@@ -10462,6 +10522,8 @@ function Invoke-WPFImpex {
             } catch {
                 if ($ThrowOnError) { throw }
                 Write-Error "An error occurred while importing: $_"
+            } finally {
+                $sync.ImportInProgress = $prevImport
             }
         }
     }
@@ -10474,7 +10536,15 @@ function Invoke-WPFInstall {
     #>
     param(
         [Parameter(Mandatory = $false)]
-        [PSObject[]]$PackagesToInstall = $($sync.selectedApps | Foreach-Object { $sync.configs.applicationsHashtable.$_ })
+        [PSObject[]]$PackagesToInstall = $($sync.selectedApps | Foreach-Object {
+            if ($sync.configs.applicationsHashtable.ContainsKey($_)) {
+                $sync.configs.applicationsHashtable[$_]
+            } elseif ($sync.configs.applicationsHashtable.ContainsKey("WPFInstall$_")) {
+                $sync.configs.applicationsHashtable["WPFInstall$_"]
+            } elseif ($_.StartsWith("WPFInstall") -and $sync.configs.applicationsHashtable.ContainsKey($_.Substring(10))) {
+                $sync.configs.applicationsHashtable[$_.Substring(10)]
+            }
+        })
     )
 
     if ($PackagesToInstall.Count -eq 0) {
@@ -11518,7 +11588,7 @@ function Invoke-WPFTakeOwnershipAdd {
 
         $fileCmdKey = "$fileKey\command"
         New-Item -Path $fileCmdKey -Force | Out-Null
-        $fileCmd = 'powershell.exe -NoProfile -WindowStyle Hidden -Command "Start-Process cmd.exe -ArgumentList ''/c takeown /f \""%1\"" && icacls \""%1\"" /grant *S-1-3-4:F /t /c /l'' -Verb runAs"'
+        $fileCmd = 'powershell.exe -NoProfile -WindowStyle Hidden -Command "Start-Process cmd.exe -ArgumentList ''/c takeown /f \"%1\" && icacls \"%1\" /grant *S-1-3-4:F /t /c /l'' -Verb runAs"'
         Set-ItemProperty -Path $fileCmdKey -Name "(Default)" -Value $fileCmd
         Set-ItemProperty -Path $fileCmdKey -Name "IsolatedCommand" -Value $fileCmd
 
@@ -11534,7 +11604,7 @@ function Invoke-WPFTakeOwnershipAdd {
 
         $dirCmdKey = "$dirKey\command"
         New-Item -Path $dirCmdKey -Force | Out-Null
-        $dirCmd = 'powershell.exe -NoProfile -WindowStyle Hidden -Command "$Y = ($null | choice).Substring(1,1); Start-Process cmd.exe -ArgumentList (''/c takeown /f \""%1\"" /r /d '' + $Y + '' && icacls \""%1\"" /grant *S-1-3-4:F /t /c /l /q'') -Verb runAs"'
+        $dirCmd = 'powershell.exe -NoProfile -WindowStyle Hidden -Command "Start-Process cmd.exe -ArgumentList ''/c takeown /f \"%1\" /r /d y && icacls \"%1\" /grant *S-1-3-4:F /t /c /l /q'' -Verb runAs"'
         Set-ItemProperty -Path $dirCmdKey -Name "(Default)" -Value $dirCmd
         Set-ItemProperty -Path $dirCmdKey -Name "IsolatedCommand" -Value $dirCmd
 
@@ -11550,15 +11620,17 @@ function Invoke-WPFTakeOwnershipAdd {
 
         $driveCmdKey = "$driveKey\command"
         New-Item -Path $driveCmdKey -Force | Out-Null
-        $driveCmd = 'cmd.exe /c takeown /f "%1\" /r /d y && icacls "%1\" /grant *S-1-3-4:F /t /c'
+        $driveCmd = 'cmd.exe /c takeown /f "%1" /r /d y && icacls "%1" /grant *S-1-3-4:F /t /c'
         Set-ItemProperty -Path $driveCmdKey -Name "(Default)" -Value $driveCmd
         Set-ItemProperty -Path $driveCmdKey -Name "IsolatedCommand" -Value $driveCmd
 
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] 'Take Full Ownership' added to right-click context menu." -ForegroundColor Green
         Write-WinUtilLog -Component "Config" -Message "Take Full Ownership added to context menu successfully."
-        Show-WinUtilMessage -Message "'Take Full Ownership' has been added to your right-click context menu." -Title "Take Full Ownership Added" -Button "OK" -Icon "Information" | Out-Null
+        Step-WinUtilJob -Status "'Take Full Ownership' added to context menu" -Percent 100
     } catch {
-        Write-WinUtilLog -Component "Config" -Message "Failed to add Take Full Ownership: $($_.Exception.Message)" -Severity "Error"
-        Show-WinUtilMessage -Message "Failed to add Take Full Ownership:`n$($_.Exception.Message)" -Title "Error" -Button "OK" -Icon "Error" | Out-Null
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to add Take Full Ownership: $($_.Exception.Message)" -ForegroundColor Red
+        Write-WinUtilLog -Component "Config" -Message "Failed to add Take Full Ownership: $($_.Exception.Message)" -Level "ERROR"
+        Step-WinUtilJob -Status "Failed to add Take Full Ownership" -Percent 100 -State "Error"
     }
 }
 
@@ -11583,11 +11655,13 @@ function Invoke-WPFTakeOwnershipRemove {
             }
         }
 
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] 'Take Full Ownership' removed from right-click context menu." -ForegroundColor Green
         Write-WinUtilLog -Component "Config" -Message "Take Full Ownership removed from context menu."
-        Show-WinUtilMessage -Message "'Take Full Ownership' has been removed from your right-click context menu." -Title "Take Full Ownership Removed" -Button "OK" -Icon "Information" | Out-Null
+        Step-WinUtilJob -Status "'Take Full Ownership' removed from context menu" -Percent 100
     } catch {
-        Write-WinUtilLog -Component "Config" -Message "Failed to remove Take Full Ownership: $($_.Exception.Message)" -Severity "Error"
-        Show-WinUtilMessage -Message "Failed to remove Take Full Ownership:`n$($_.Exception.Message)" -Title "Error" -Button "OK" -Icon "Error" | Out-Null
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to remove Take Full Ownership: $($_.Exception.Message)" -ForegroundColor Red
+        Write-WinUtilLog -Component "Config" -Message "Failed to remove Take Full Ownership: $($_.Exception.Message)" -Level "ERROR"
+        Step-WinUtilJob -Status "Failed to remove Take Full Ownership" -Percent 100 -State "Error"
     }
 }
 
@@ -11735,7 +11809,9 @@ function Invoke-WPFtweaksbutton {
 
     # The restore point has to be taken before anything else changes
     $restorePointTweak = "WPFTweaksRestorePoint"
-    $tweaksToRun = @($Tweaks | Where-Object { $_ -ne $restorePointTweak })
+    $diskCleanupTweak = "WPFTweaksDiskCleanup"
+    $hasDiskCleanup = $Tweaks -contains $diskCleanupTweak
+    $tweaksToRun = @($Tweaks | Where-Object { $_ -ne $restorePointTweak -and $_ -ne $diskCleanupTweak })
     $totalSteps = [Math]::Max(@($Tweaks).Count, 1)
     $completedSteps = 0
 
@@ -11760,13 +11836,39 @@ function Invoke-WPFtweaksbutton {
       }
     }
 
+    $sync.CancelRequested = $false
+
     foreach ($tweak in $tweaksToRun) {
+      if ($sync.CancelRequested) {
+        Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [CANCELLED] Tweaks execution cancelled by user after $completedSteps step(s)." -ForegroundColor Yellow
+        Write-WinUtilLog -Component "Tweaks" -Message "Tweaks execution cancelled by user after $completedSteps step(s)."
+        Step-WinUtilJob -Status "Tweaks cancelled by user" -Percent ([int](($completedSteps / $totalSteps) * 100))
+        break
+      }
+
       Step-WinUtilJob -Status "Applying $tweak ($($completedSteps + 1)/$totalSteps)" -Percent ([int](($completedSteps / $totalSteps) * 100))
       Measure-WinUtilStep -Scope "Tweaks" -Name $tweak -ScriptBlock {
         Invoke-WinUtilTweaks $tweak
       }
       $completedSteps++
       Step-WinUtilJob -Percent ([int](($completedSteps / $totalSteps) * 100))
+    }
+
+    # Run Disk Cleanup at the very end of all tweaks as requested
+    if ($hasDiskCleanup -and -not $sync.CancelRequested) {
+      $noticeMsg = "Disk Cleanup: Notice - this may take several minutes depending on temp and update cache size."
+      Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [NOTICE] Running Disk Cleanup at the end of tweaks. This may take several minutes depending on system temp and Windows Update cache..." -ForegroundColor Yellow
+      Write-WinUtilLog -Component "Tweaks" -Message "Disk Cleanup scheduled at the end of tweaks. Running cleanmgr and component cleanup..."
+      Step-WinUtilJob -Status $noticeMsg -Percent ([int](($completedSteps / $totalSteps) * 100))
+      Start-Sleep -Seconds 2
+
+      Step-WinUtilJob -Status "Running Disk Cleanup ($diskCleanupTweak)..." -Percent ([int](($completedSteps / $totalSteps) * 100))
+      Measure-WinUtilStep -Scope "Tweaks" -Name $diskCleanupTweak -ScriptBlock {
+        Invoke-WinUtilTweaks $diskCleanupTweak
+      }
+      $completedSteps++
+      Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Disk Cleanup completed." -ForegroundColor Green
+      Step-WinUtilJob -Percent 100
     }
   }
 }
@@ -12196,12 +12298,9 @@ function Invoke-WPFUIElements {
                         $button.SetResourceReference([Windows.Controls.Control]::MarginProperty, "ButtonMargin")
                         $button.SetResourceReference([Windows.Controls.Control]::FontSizeProperty, "ButtonFontSize")
                         if ($entryInfo.ButtonWidth) {
-                            $baseWidth = [int]$entryInfo.ButtonWidth
-                            $button.Width = [math]::Max($baseWidth, 350)
+                            $button.Width = [int]$entryInfo.ButtonWidth
                         }
                         if ($entryInfo.Highlight -or $entryInfo.Content -like "[MAX]*" -or $entryInfo.Content -like "★*") {
-                            $button.BorderBrush = [Windows.Media.BrushConverter]::new().ConvertFromString("#0078D4")
-                            $button.BorderThickness = New-Object Windows.Thickness(2)
                             $button.FontWeight = [Windows.FontWeights]::SemiBold
                         }
                         [System.Windows.Automation.AutomationProperties]::SetName($button, $entryInfo.Content)
@@ -12578,8 +12677,16 @@ function Invoke-WPFundoall {
 
         $total = @($Tweaks).Count
         Write-WinUtilLog -Component "Tweaks" -Message "Undo tweaks requested: $total selected tweak(s)."
+        $sync.CancelRequested = $false
 
         for ($i = 0; $i -lt $total; $i++) {
+            if ($sync.CancelRequested) {
+                Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [CANCELLED] Undo tweaks cancelled by user after $i step(s)." -ForegroundColor Yellow
+                Write-WinUtilLog -Component "Tweaks" -Message "Undo tweaks cancelled by user after $i steps."
+                Step-WinUtilJob -Status "Undo tweaks cancelled by user" -Percent ([int](($i / $total) * 100))
+                break
+            }
+
             Step-WinUtilJob -Status "Undoing $($Tweaks[$i]) ($($i + 1)/$total)" -Percent ([int](($i / $total) * 100))
             Measure-WinUtilStep -Scope "Undo tweaks" -Name $Tweaks[$i] -ScriptBlock {
                 Invoke-WinUtiltweaks $Tweaks[$i] -undo $true
@@ -12592,7 +12699,15 @@ function Invoke-WPFundoall {
 function Invoke-WPFUnInstall {
     param(
         [Parameter(Mandatory=$false)]
-        [PSObject[]]$PackagesToUninstall = $($sync.selectedApps | Foreach-Object { $sync.configs.applicationsHashtable.$_ })
+        [PSObject[]]$PackagesToUninstall = $($sync.selectedApps | Foreach-Object {
+            if ($sync.configs.applicationsHashtable.ContainsKey($_)) {
+                $sync.configs.applicationsHashtable[$_]
+            } elseif ($sync.configs.applicationsHashtable.ContainsKey("WPFInstall$_")) {
+                $sync.configs.applicationsHashtable["WPFInstall$_"]
+            } elseif ($_.StartsWith("WPFInstall") -and $sync.configs.applicationsHashtable.ContainsKey($_.Substring(10))) {
+                $sync.configs.applicationsHashtable[$_.Substring(10)]
+            }
+        })
     )
     <#
 
@@ -16026,46 +16141,46 @@ $sync.configs.themes = @'
                   "BorderOpacity":  "0.2"
               },
     "Dark":  {
-                 "AppInstallUnselectedColor":  "#181822",
-                 "AppInstallHighlightedColor":  "#2A2A38",
-                 "AppInstallSelectedColor":  "#3E1E34",
-                 "ComboBoxForegroundColor":  "#F5F5FA",
-                 "ComboBoxBackgroundColor":  "#1A1A24",
-                 "LabelboxForegroundColor":  "#FF3385",
-                 "MainForegroundColor":  "#F5F5FA",
-                 "MainBackgroundColor":  "#111116",
-                 "LabelBackgroundColor":  "#111116",
-                 "LinkForegroundColor":  "#FF66A3",
-                 "LinkHoverForegroundColor":  "#FFFFFF",
-                 "ScrollBarBackgroundColor":  "#1A1A24",
-                 "ScrollBarHoverColor":  "#2E2030",
-                 "ScrollBarDraggingColor":  "#FF007F",
-                 "ProgressBarForegroundColor":  "#FF007F",
-                 "ProgressBarErrorColor":  "#E50914",
-                 "ProgressBarWarningColor":  "#FF8800",
+                 "AppInstallUnselectedColor":  "#1A1C23",
+                 "AppInstallHighlightedColor":  "#242731",
+                 "AppInstallSelectedColor":  "#2C313E",
+                 "ComboBoxForegroundColor":  "#F3F4F6",
+                 "ComboBoxBackgroundColor":  "#1A1C23",
+                 "LabelboxForegroundColor":  "#EF4444",
+                 "MainForegroundColor":  "#F3F4F6",
+                 "MainBackgroundColor":  "#131419",
+                 "LabelBackgroundColor":  "#131419",
+                 "LinkForegroundColor":  "#60A5FA",
+                 "LinkHoverForegroundColor":  "#93C5FD",
+                 "ScrollBarBackgroundColor":  "#181920",
+                 "ScrollBarHoverColor":  "#282A36",
+                 "ScrollBarDraggingColor":  "#4B5563",
+                 "ProgressBarForegroundColor":  "#DC2626",
+                 "ProgressBarErrorColor":  "#EF4444",
+                 "ProgressBarWarningColor":  "#F59E0B",
                  "ProgressBarBackgroundColor":  "Transparent",
-                 "ButtonInstallBackgroundColor":  "#181822",
-                 "ButtonTweaksBackgroundColor":  "#1E1E2A",
-                 "ButtonConfigBackgroundColor":  "#222230",
-                 "ButtonUpdatesBackgroundColor":  "#262638",
-                 "ButtonWin11ISOBackgroundColor":  "#2A2A40",
-                 "ButtonAppxBackgroundColor":  "#2E2E48",
+                 "ButtonInstallBackgroundColor":  "#1E202A",
+                 "ButtonTweaksBackgroundColor":  "#222530",
+                 "ButtonConfigBackgroundColor":  "#262936",
+                 "ButtonUpdatesBackgroundColor":  "#2A2E3D",
+                 "ButtonWin11ISOBackgroundColor":  "#2E3344",
+                 "ButtonAppxBackgroundColor":  "#32384A",
                  "ButtonInstallForegroundColor":  "#FFFFFF",
                  "ButtonTweaksForegroundColor":  "#FFFFFF",
                  "ButtonConfigForegroundColor":  "#FFFFFF",
                  "ButtonUpdatesForegroundColor":  "#FFFFFF",
                  "ButtonWin11ISOForegroundColor":  "#FFFFFF",
                  "ButtonAppxForegroundColor":  "#FFFFFF",
-                 "ButtonBackgroundColor":  "#1A1A24",
-                 "ButtonBackgroundPressedColor":  "#FFFFFF",
-                 "ButtonBackgroundMouseoverColor":  "#38182A",
-                 "ButtonBackgroundSelectedColor":  "#FF007F",
+                 "ButtonBackgroundColor":  "#1F222C",
+                 "ButtonBackgroundPressedColor":  "#323644",
+                 "ButtonBackgroundMouseoverColor":  "#292C38",
+                 "ButtonBackgroundSelectedColor":  "#DC2626",
                  "ButtonForegroundColor":  "#FFFFFF",
-                 "ToggleButtonOnColor":  "#FF007F",
-                 "ToggleButtonOffColor":  "#4D4D60",
-                 "ToolTipBackgroundColor":  "#1C1C24",
-                 "BorderColor":  "#FF007F",
-                 "BorderOpacity":  "0.35"
+                 "ToggleButtonOnColor":  "#DC2626",
+                 "ToggleButtonOffColor":  "#4B5563",
+                 "ToolTipBackgroundColor":  "#1C1D24",
+                 "BorderColor":  "#282B36",
+                 "BorderOpacity":  "0.2"
              }
 }
 '@ | ConvertFrom-Json
@@ -18572,14 +18687,9 @@ $inputXML = @'
             <Setter Property="Background" Value="{DynamicResource MainBackgroundColor}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="5"/>
-            <Setter Property="Padding" Value="5"/>
-            <Setter Property="Margin" Value="5"/>
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect ShadowDepth="5" BlurRadius="5" Opacity="{DynamicResource BorderOpacity}" Color="{DynamicResource CBorderColor}"/>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="6"/>
+            <Setter Property="Margin" Value="4"/>
         </Style>
 
         <Style TargetType="TextBox">
@@ -19191,10 +19301,11 @@ $inputXML = @'
                             </Border>
                         </Grid>
                     </ScrollViewer>
-                    <Border Grid.Row="1" Background="{DynamicResource MainBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="5" HorizontalAlignment="Stretch" Padding="10">
+                    <Border Grid.Row="1" Background="{DynamicResource MainBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" CornerRadius="6" HorizontalAlignment="Stretch" Padding="10">
                         <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="0">
                             <Button Name="WPFTweaksbutton" Content="Run Tweaks" Margin="5" Width="{DynamicResource ButtonWidth}" Height="{DynamicResource ButtonHeight}"/>
                             <Button Name="WPFUndoall" Content="Undo Selected Tweaks" Margin="5" Width="{DynamicResource ButtonWidth}" Height="{DynamicResource ButtonHeight}"/>
+                            <Button Name="WPFCancelTweaks" Content="Cancel Tweaks" Margin="5" Width="{DynamicResource ButtonWidth}" Height="{DynamicResource ButtonHeight}"/>
                         </WrapPanel>
                     </Border>
                 </Grid>
@@ -19997,15 +20108,17 @@ $inputXML = @'
         </TabControl>
 
         <!-- Window-level progress indicator - visible regardless of active tab -->
-        <Border Name="WPFTweaksProgressBar" Grid.Row="3" Background="{DynamicResource MainBackgroundColor}" Visibility="Collapsed" Padding="10,6">
+        <Border Name="WPFTweaksProgressBar" Grid.Row="3" Background="{DynamicResource MainBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" VerticalAlignment="Bottom" Visibility="Collapsed" Padding="12,6">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Orientation="Vertical">
+                <StackPanel Grid.Column="0" Orientation="Vertical" VerticalAlignment="Center" Margin="0,0,10,0">
                     <TextBlock Name="WPFTweaksProgressLabel" Text="" Foreground="{DynamicResource MainForegroundColor}" FontSize="13" Background="Transparent" Margin="0,0,0,4"/>
-                    <ProgressBar Name="WPFTweaksProgressValue" Height="6" Minimum="0" Maximum="100" Value="0" Style="{StaticResource RoundedProgressBarStyle}"/>
+                    <ProgressBar Name="WPFTweaksProgressValue" Height="8" Minimum="0" Maximum="100" Value="0" Style="{StaticResource RoundedProgressBarStyle}"/>
                 </StackPanel>
+                <Button Name="WPFCancelJob" Grid.Column="1" Content=" Cancel " Margin="6,0,0,0" Padding="14,4" Height="28" VerticalAlignment="Center" Foreground="#FFFFFF" Background="#DC2626" BorderThickness="0" Cursor="Hand" FontWeight="SemiBold" ToolTip="Cancel the currently running operation"/>
             </Grid>
         </Border>
     </Grid>
@@ -20551,6 +20664,7 @@ if ($host.UI.RawUI) {
 $sync.configs.applicationsHashtable = @{}
 $sync.configs.applications.PSObject.Properties | ForEach-Object {
     $sync.configs.applicationsHashtable[$_.Name] = $_.Value
+    $sync.configs.applicationsHashtable["WPFInstall$($_.Name)"] = $_.Value
 }
 
 $sync.configs.appxHashtable = @{}
