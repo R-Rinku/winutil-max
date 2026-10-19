@@ -560,7 +560,6 @@ Version  : <a href="https://github.com/ChrisTitusTech/winutil/releases/tag/$($sy
     $sync["Form"].Dispatcher.BeginInvoke([System.Windows.Threading.DispatcherPriority]::Input, [action]{
         $sinceStart = [int]((Get-Date) - $sync.StartedAt).TotalMilliseconds
         Write-WinUtilLog -Level "DEBUG" -Component "UI" -Message "timing: interface ready for input $sinceStart ms after start."
-        Start-WinUtilBatLaunchAnimation
     }) | Out-Null
 
     $sync["Form"].ShowDialog() | Out-Null
