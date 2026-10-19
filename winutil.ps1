@@ -9529,61 +9529,90 @@ function Write-WinUtilAutoRunSummary {
     return 0
 }
 
+function Invoke-WPFActivationMASCopy {
+    <#
+    .SYNOPSIS
+        Copies the Microsoft Activation Scripts (MAS) command to clipboard.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $cmd = "irm https://get.activated.win | iex"
+    try {
+        Set-Clipboard -Value $cmd
+        Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Copied MAS command to clipboard: $cmd" -ForegroundColor Green
+        Write-WinUtilLog -Component "Activation" -Message "Copied MAS command to clipboard: $cmd"
+        if ($sync.WPFActivationMASCopy) {
+            $sync.WPFActivationMASCopy.Content = "Copied!"
+        }
+    } catch {
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to copy to clipboard: $($_.Exception.Message)" -ForegroundColor Red
+        Write-WinUtilLog -Component "Activation" -Message "Failed to copy to clipboard: $($_.Exception.Message)" -Level "ERROR"
+    }
+}
+
+function Invoke-WPFOpenStandardShell {
+    <#
+    .SYNOPSIS
+        Opens an interactive standard (non-admin / unelevated) PowerShell console.
+    #>
+    [CmdletBinding()]
+    param()
+
+    Write-WinUtilLog -Component "Activation" -Message "Opening standard user PowerShell terminal."
+    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Opening standard user PowerShell terminal..." -ForegroundColor Cyan
+
+    try {
+        $shell = New-Object -ComObject Shell.Application
+        $shell.ShellExecute("powershell.exe", "-NoExit", $env:USERPROFILE, "open", 1)
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Standard user PowerShell terminal opened." -ForegroundColor Green
+        Write-WinUtilLog -Component "Activation" -Message "Standard PowerShell opened."
+    } catch {
+        Start-Process powershell.exe -WorkingDirectory $env:USERPROFILE
+    }
+}
+
 function Invoke-WPFActivationMAS {
     <#
     .SYNOPSIS
         Launches Microsoft Activation Scripts (MAS) in an interactive standard user console.
     .DESCRIPTION
         MAS (massgrave.dev) is an open-source Windows and Office activator utilizing HWID, Ohook,
-        and KMS38 activation methods. Running via MAS_AIO.cmd in a standard shell allows the script
-        to prompt for UAC only if required, and completely avoids Windows Defender ClickFix heuristics.
+        and KMS38 activation methods. Running in a standard shell allows the script to prompt for
+        UAC only if required.
     .LINK
         https://massgrave.dev/
     #>
     [CmdletBinding()]
     param()
 
-    Write-WinUtilLog -Component "Activation" -Message "Preparing Microsoft Activation Scripts (MAS) from massgrave.dev."
-    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Preparing Microsoft Activation Scripts (MAS)..." -ForegroundColor Cyan
+    Write-WinUtilLog -Component "Activation" -Message "Launching Microsoft Activation Scripts (MAS) in standard user shell."
+    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Launching MAS in standard user shell..." -ForegroundColor Cyan
 
     try {
-        $masFile = Join-Path $env:TEMP "MAS_AIO.cmd"
-        $downloadSuccess = $false
+        # Copy command to clipboard first so user has it immediately if window closes or gets blocked
+        $cmd = "irm https://massgrave.dev/get | iex"
+        Set-Clipboard -Value "irm https://get.activated.win | iex"
 
-        $urls = @(
-            "https://raw.githubusercontent.com/massgravel/Microsoft-Activation-Scripts/master/MAS/All-In-One-Version-KL/MAS_AIO.cmd",
-            "https://gitlab.com/massgrave/microsoft-activation-scripts/-/raw/master/MAS/All-In-One-Version-KL/MAS_AIO.cmd"
-        )
+        $arg = "-NoExit -Command `"Write-Host '=========================================' -ForegroundColor Cyan; " +
+               "Write-Host '  Microsoft Activation Scripts (MAS)' -ForegroundColor Green; " +
+               "Write-Host '  Running in Standard User Shell' -ForegroundColor Gray; " +
+               "Write-Host '=========================================`n' -ForegroundColor Cyan; " +
+               "irm https://massgrave.dev/get | iex`""
 
-        foreach ($url in $urls) {
-            try {
-                Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] Fetching MAS script from $($url.Split('/')[2])..." -ForegroundColor DarkGray
-                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-                $wc = New-Object System.Net.WebClient
-                $wc.Headers.Add("User-Agent", "Mozilla/5.0")
-                $wc.DownloadFile($url, $masFile)
-                if (Test-Path $masFile) {
-                    $downloadSuccess = $true
-                    break
-                }
-            } catch {
-                Write-WinUtilLog -Component "Activation" -Message "Download failed from $($url): $($_.Exception.Message)" -Level "WARN"
-            }
-        }
-
-        if (-not $downloadSuccess -or -not (Test-Path $masFile)) {
-            throw "Unable to download MAS script from official Massgrave repositories. Please check your internet connection."
-        }
-
-        # Launch in standard (unelevated) shell via Shell.Application so UAC is requested on demand
+        # Launch strictly in standard (unelevated) shell via Shell.Application
         try {
             $shell = New-Object -ComObject Shell.Application
-            $shell.ShellExecute("cmd.exe", "/c `"$masFile`"", $env:TEMP, "open", 1)
+            $shell.ShellExecute("powershell.exe", $arg, $env:USERPROFILE, "open", 1)
         } catch {
-            Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$masFile`"" -WorkingDirectory $env:TEMP
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName = "powershell.exe"
+            $psi.Arguments = $arg
+            $psi.UseShellExecute = $true
+            [System.Diagnostics.Process]::Start($psi) | Out-Null
         }
 
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] MAS interactive window launched in standard shell (prompts for UAC on demand)." -ForegroundColor Green
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] MAS interactive window launched in standard shell (command also copied to clipboard)." -ForegroundColor Green
         Write-WinUtilLog -Component "Activation" -Message "MAS launched successfully in standard shell."
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to launch MAS: $($_.Exception.Message)" -ForegroundColor Red
@@ -9918,9 +9947,13 @@ function Invoke-WPFButtonAction {
         }
         "WPFUpdatessecurity" {Invoke-WPFUpdatessecurity}
         "WPFActivationMAS" {Invoke-WPFActivationMAS}
+        "WPFActivationMASCopy" {Invoke-WPFActivationMASCopy}
+        "WPFActivationOpenShell" {Invoke-WPFOpenStandardShell}
         "WPFActivationStatus" {Invoke-WPFActivationStatus}
         "WPFSpicetifyInstall" {Invoke-WPFSpicetifyInstall}
         "WPFSpicetifyMarketplace" {Invoke-WPFSpicetifyMarketplace}
+        "WPFSpicetifyCopy" {Invoke-WPFSpicetifyCopy}
+        "WPFSpicetifyOpenShell" {Invoke-WPFOpenStandardShell}
         "WPFGetInstalled" {Invoke-WPFGetInstalled -CheckBox "winget"}
         "WPFGetInstalledTweaks" {Invoke-WPFGetInstalled -CheckBox "tweaks"}
         "WPFAppxRemoval" {
@@ -11615,6 +11648,29 @@ function Invoke-WPFSpicetifyMarketplace {
         Write-WinUtilLog -Component "Activation" -Message "Failed to start Marketplace: $($_.Exception.Message)" -Level "ERROR"
     }
 }
+
+function Invoke-WPFSpicetifyCopy {
+    <#
+    .SYNOPSIS
+        Copies the Spicetify CLI install command to clipboard.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $cmd = "iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex"
+    try {
+        Set-Clipboard -Value $cmd
+        Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Copied Spicetify command to clipboard: $cmd" -ForegroundColor Green
+        Write-WinUtilLog -Component "Activation" -Message "Copied Spicetify command to clipboard: $cmd"
+        if ($sync.WPFSpicetifyCopy) {
+            $sync.WPFSpicetifyCopy.Content = "Copied!"
+        }
+    } catch {
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to copy to clipboard: $($_.Exception.Message)" -ForegroundColor Red
+        Write-WinUtilLog -Component "Activation" -Message "Failed to copy to clipboard: $($_.Exception.Message)" -Level "ERROR"
+    }
+}
+
 
 function Invoke-WPFSSHServer {
     <#
@@ -19709,134 +19765,208 @@ $inputXML = @'
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Header -->
-                        <StackPanel Grid.Row="0" Margin="10,10,10,16">
+                        <!-- Header (Compact) -->
+                        <StackPanel Grid.Row="0" Margin="8,4,8,8">
                             <TextBlock Text="Activation &amp; Enhancement Utilities"
-                                       FontSize="24"
+                                       FontSize="16"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource MainForegroundColor}"/>
-                            <TextBlock Text="Trusted open-source tools for genuine Windows &amp; Office activation and desktop client enhancements."
-                                       Margin="0,6,0,0"
-                                       FontSize="13"
-                                       TextWrapping="Wrap"
-                                       Foreground="{DynamicResource MainForegroundColor}"/>
+                            <TextBlock Text="Standard user (non-admin) utilities. Use 1-click Copy or Open Terminal to run safely."
+                                       FontSize="11"
+                                       Margin="0,2,0,0"
+                                       Foreground="{DynamicResource MainForegroundColor}"
+                                       Opacity="0.8"/>
                         </StackPanel>
 
-                        <!-- Cards Grid -->
+                        <!-- Cards Grid (Compact) -->
                         <UniformGrid Grid.Row="1" Columns="2">
                             <!-- Microsoft Activation Scripts (MAS) Card -->
                             <Border Style="{StaticResource BorderStyle}"
                                     BorderBrush="#0078D4"
-                                    BorderThickness="2"
-                                    Padding="18"
-                                    Margin="8"
-                                    MinHeight="360">
+                                    BorderThickness="1.5"
+                                    CornerRadius="6"
+                                    Padding="12,10"
+                                    Margin="6,4">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-                                    <StackPanel Grid.Row="0" Margin="0,0,0,14">
+
+                                    <!-- Title & Subtitle -->
+                                    <StackPanel Grid.Row="0" Margin="0,0,0,6">
                                         <TextBlock Text="Microsoft Activation Scripts (MAS)"
-                                                   FontSize="20"
+                                                   FontSize="14"
                                                    FontWeight="Bold"
                                                    Foreground="#0078D4"/>
-                                        <TextBlock Text="massgrave.dev • HWID / Ohook / KMS38"
-                                                   Margin="0,4,0,0"
-                                                   FontSize="12"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource LinkForegroundColor}"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Row="1">
-                                        <TextBlock Text="The most trusted open-source Windows and Office activator in the world:" TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="• HWID (Digital License): Permanent Windows 10/11 activation linked to your motherboard." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="• Ohook: Permanent Office activation without modifying system files or triggering antivirus." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="• KMS38: Activate Windows Server / Enterprise until year 2038." TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="Method: Official Massgrave All-In-One (MAS_AIO.cmd) • Standard Shell"
+                                        <TextBlock Text="massgrave.dev • Windows &amp; Office HWID / Ohook activation"
                                                    FontSize="11"
-                                                   FontFamily="Consolas"
-                                                   Padding="6,4"
-                                                   Background="{DynamicResource MainBackgroundColor}"
-                                                   Foreground="{DynamicResource MainForegroundColor}"/>
+                                                   Foreground="{DynamicResource LinkForegroundColor}"
+                                                   Margin="0,1,0,0"/>
                                     </StackPanel>
-                                    <StackPanel Grid.Row="2" Orientation="Vertical" Margin="0,16,0,0">
+
+                                    <!-- Description -->
+                                    <TextBlock Grid.Row="1"
+                                               Text="Trusted open-source activator. Runs in standard shell; requests UAC only if permanent HWID is selected."
+                                               TextWrapping="Wrap"
+                                               FontSize="11"
+                                               Margin="0,0,0,8"
+                                               Foreground="{DynamicResource MainForegroundColor}"/>
+
+                                    <!-- Command Box with Copy Button -->
+                                    <Grid Grid.Row="2" Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0"
+                                                Background="{DynamicResource MainBackgroundColor}"
+                                                BorderBrush="{DynamicResource BorderBrushColor}"
+                                                BorderThickness="1"
+                                                CornerRadius="3"
+                                                Padding="6,4"
+                                                Margin="0,0,4,0">
+                                            <TextBlock Text="irm https://get.activated.win | iex"
+                                                       FontSize="11"
+                                                       FontFamily="Consolas"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource MainForegroundColor}"/>
+                                        </Border>
+                                        <Button Grid.Column="1"
+                                                Name="WPFActivationMASCopy"
+                                                Content="Copy"
+                                                ToolTip="Copy command to clipboard to run in your own terminal"
+                                                Padding="10,4"
+                                                FontSize="11"/>
+                                    </Grid>
+
+                                    <!-- Action Buttons -->
+                                    <WrapPanel Grid.Row="3" Orientation="Horizontal">
+                                        <Button Name="WPFActivationOpenShell"
+                                                Content="Open Standard Terminal"
+                                                ToolTip="Open a standard non-admin PowerShell window"
+                                                FontSize="11"
+                                                Padding="8,5"
+                                                Margin="0,0,6,4"/>
                                         <Button Name="WPFActivationMAS"
-                                                Content="Launch MAS (Interactive Menu)"
-                                                FontSize="{DynamicResource ConfigTabButtonFontSize}"
-                                                FontWeight="Bold"
+                                                Content="Run in Standard Shell"
+                                                ToolTip="Launch MAS script directly in a standard shell"
+                                                FontSize="11"
+                                                FontWeight="SemiBold"
                                                 Background="#0078D4"
                                                 Foreground="White"
-                                                Padding="10"
-                                                Margin="0,0,0,8"/>
+                                                Padding="8,5"
+                                                Margin="0,0,6,4"/>
                                         <Button Name="WPFActivationStatus"
-                                                Content="Check Windows Activation Status"
-                                                FontSize="{DynamicResource ConfigTabButtonFontSize}"
-                                                Padding="8"/>
-                                    </StackPanel>
+                                                Content="Check Status"
+                                                ToolTip="Check Windows activation expiration status"
+                                                FontSize="11"
+                                                Padding="8,5"
+                                                Margin="0,0,0,4"/>
+                                    </WrapPanel>
                                 </Grid>
                             </Border>
 
-                            <!-- Spicetify Spotify Mod & Ad-Blocker Card -->
+                            <!-- Spicetify Spotify Mod Card -->
                             <Border Style="{StaticResource BorderStyle}"
                                     BorderBrush="#1DB954"
-                                    BorderThickness="2"
-                                    Padding="18"
-                                    Margin="8"
-                                    MinHeight="360">
+                                    BorderThickness="1.5"
+                                    CornerRadius="6"
+                                    Padding="12,10"
+                                    Margin="6,4">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-                                    <StackPanel Grid.Row="0" Margin="0,0,0,14">
-                                        <TextBlock Text="Spicetify CLI &amp; Spotify Mod"
-                                                   FontSize="20"
+
+                                    <!-- Title & Subtitle -->
+                                    <StackPanel Grid.Row="0" Margin="0,0,0,6">
+                                        <TextBlock Text="Spicetify CLI &amp; Marketplace"
+                                                   FontSize="14"
                                                    FontWeight="Bold"
                                                    Foreground="#1DB954"/>
-                                        <TextBlock Text="spicetify.app • Desktop Client Modding &amp; Ad-Free"
-                                                   Margin="0,4,0,0"
-                                                   FontSize="12"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="#1DB954"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Row="1">
-                                        <TextBlock Text="Powerful CLI tool to customize the official Spotify Desktop application:" TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="• Full theme engine and custom CSS styling." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="• In-app Marketplace for themes, extensions, and custom apps." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="• Extension support including ad-blockers and audio enhancements." TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="Method: Official Spicetify Installer • Standard User Shell"
+                                        <TextBlock Text="spicetify.app • Spotify Desktop themes, extensions &amp; ad-free"
                                                    FontSize="11"
-                                                   FontFamily="Consolas"
-                                                   Padding="6,4"
-                                                   Background="{DynamicResource MainBackgroundColor}"
-                                                   Foreground="{DynamicResource MainForegroundColor}"/>
+                                                   Foreground="#1DB954"
+                                                   Margin="0,1,0,0"/>
                                     </StackPanel>
-                                    <StackPanel Grid.Row="2" Orientation="Vertical" Margin="0,16,0,0">
+
+                                    <!-- Description -->
+                                    <TextBlock Grid.Row="1"
+                                               Text="CLI tool to mod Spotify. Must run in a non-admin shell to install into your user profile."
+                                               TextWrapping="Wrap"
+                                               FontSize="11"
+                                               Margin="0,0,0,8"
+                                               Foreground="{DynamicResource MainForegroundColor}"/>
+
+                                    <!-- Command Box with Copy Button -->
+                                    <Grid Grid.Row="2" Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0"
+                                                Background="{DynamicResource MainBackgroundColor}"
+                                                BorderBrush="{DynamicResource BorderBrushColor}"
+                                                BorderThickness="1"
+                                                CornerRadius="3"
+                                                Padding="6,4"
+                                                Margin="0,0,4,0">
+                                            <TextBlock Text="iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex"
+                                                       FontSize="11"
+                                                       FontFamily="Consolas"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource MainForegroundColor}"/>
+                                        </Border>
+                                        <Button Grid.Column="1"
+                                                Name="WPFSpicetifyCopy"
+                                                Content="Copy"
+                                                ToolTip="Copy install command to clipboard"
+                                                Padding="10,4"
+                                                FontSize="11"/>
+                                    </Grid>
+
+                                    <!-- Action Buttons -->
+                                    <WrapPanel Grid.Row="3" Orientation="Horizontal">
+                                        <Button Name="WPFSpicetifyOpenShell"
+                                                Content="Open Standard Terminal"
+                                                ToolTip="Open a standard non-admin PowerShell window"
+                                                FontSize="11"
+                                                Padding="8,5"
+                                                Margin="0,0,6,4"/>
                                         <Button Name="WPFSpicetifyInstall"
-                                                Content="Install Spicetify CLI"
-                                                FontSize="{DynamicResource ConfigTabButtonFontSize}"
-                                                FontWeight="Bold"
+                                                Content="Install CLI"
+                                                ToolTip="Install Spicetify CLI in standard user shell"
+                                                FontSize="11"
+                                                FontWeight="SemiBold"
                                                 Background="#1DB954"
                                                 Foreground="Black"
-                                                Padding="10"
-                                                Margin="0,0,0,8"/>
+                                                Padding="8,5"
+                                                Margin="0,0,6,4"/>
                                         <Button Name="WPFSpicetifyMarketplace"
-                                                Content="Install Spicetify Marketplace"
-                                                FontSize="{DynamicResource ConfigTabButtonFontSize}"
-                                                Padding="8"/>
-                                    </StackPanel>
+                                                Content="Install Marketplace"
+                                                ToolTip="Install Spicetify Marketplace in standard user shell"
+                                                FontSize="11"
+                                                Padding="8,5"
+                                                Margin="0,0,0,4"/>
+                                    </WrapPanel>
                                 </Grid>
                             </Border>
                         </UniformGrid>
 
-                        <!-- Footer Info -->
-                        <Border Grid.Row="2" Style="{StaticResource BorderStyle}" Margin="8,16,8,8" Padding="12">
-                            <TextBlock Text="Note: Both utilities run in standard (unelevated) user context for safety and proper user-profile installation. If elevated privileges are needed (such as permanent HWID Windows activation), the script will prompt for standard UAC approval."
+                        <!-- Footer Info (Compact) -->
+                        <Border Grid.Row="2" Style="{StaticResource BorderStyle}" Margin="6,8,6,4" Padding="8,6">
+                            <TextBlock Text="Standard User Isolation: Both tools run strictly in standard (non-admin) user context. To avoid antivirus false positives, use 'Copy' and paste into your own standard terminal."
                                        TextWrapping="Wrap"
                                        HorizontalAlignment="Center"
-                                       FontSize="12"
+                                       FontSize="11"
+                                       Opacity="0.85"
                                        Foreground="{DynamicResource MainForegroundColor}"/>
                         </Border>
                     </Grid>

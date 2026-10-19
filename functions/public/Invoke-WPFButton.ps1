@@ -202,9 +202,13 @@ function Invoke-WPFButtonAction {
         }
         "WPFUpdatessecurity" {Invoke-WPFUpdatessecurity}
         "WPFActivationMAS" {Invoke-WPFActivationMAS}
+        "WPFActivationMASCopy" {Invoke-WPFActivationMASCopy}
+        "WPFActivationOpenShell" {Invoke-WPFOpenStandardShell}
         "WPFActivationStatus" {Invoke-WPFActivationStatus}
         "WPFSpicetifyInstall" {Invoke-WPFSpicetifyInstall}
         "WPFSpicetifyMarketplace" {Invoke-WPFSpicetifyMarketplace}
+        "WPFSpicetifyCopy" {Invoke-WPFSpicetifyCopy}
+        "WPFSpicetifyOpenShell" {Invoke-WPFOpenStandardShell}
         "WPFGetInstalled" {Invoke-WPFGetInstalled -CheckBox "winget"}
         "WPFGetInstalledTweaks" {Invoke-WPFGetInstalled -CheckBox "tweaks"}
         "WPFAppxRemoval" {

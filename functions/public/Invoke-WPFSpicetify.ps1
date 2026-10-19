@@ -87,3 +87,26 @@ function Invoke-WPFSpicetifyMarketplace {
         Write-WinUtilLog -Component "Activation" -Message "Failed to start Marketplace: $($_.Exception.Message)" -Level "ERROR"
     }
 }
+
+function Invoke-WPFSpicetifyCopy {
+    <#
+    .SYNOPSIS
+        Copies the Spicetify CLI install command to clipboard.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $cmd = "iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex"
+    try {
+        Set-Clipboard -Value $cmd
+        Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Copied Spicetify command to clipboard: $cmd" -ForegroundColor Green
+        Write-WinUtilLog -Component "Activation" -Message "Copied Spicetify command to clipboard: $cmd"
+        if ($sync.WPFSpicetifyCopy) {
+            $sync.WPFSpicetifyCopy.Content = "Copied!"
+        }
+    } catch {
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to copy to clipboard: $($_.Exception.Message)" -ForegroundColor Red
+        Write-WinUtilLog -Component "Activation" -Message "Failed to copy to clipboard: $($_.Exception.Message)" -Level "ERROR"
+    }
+}
+
