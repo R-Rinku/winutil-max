@@ -423,12 +423,9 @@ function Invoke-WPFUIElements {
                         $button.SetResourceReference([Windows.Controls.Control]::MarginProperty, "ButtonMargin")
                         $button.SetResourceReference([Windows.Controls.Control]::FontSizeProperty, "ButtonFontSize")
                         if ($entryInfo.ButtonWidth) {
-                            $baseWidth = [int]$entryInfo.ButtonWidth
-                            $button.Width = [math]::Max($baseWidth, 350)
+                            $button.Width = [int]$entryInfo.ButtonWidth
                         }
                         if ($entryInfo.Highlight -or $entryInfo.Content -like "[MAX]*" -or $entryInfo.Content -like "★*") {
-                            $button.BorderBrush = [Windows.Media.BrushConverter]::new().ConvertFromString("#0078D4")
-                            $button.BorderThickness = New-Object Windows.Thickness(2)
                             $button.FontWeight = [Windows.FontWeights]::SemiBold
                         }
                         [System.Windows.Automation.AutomationProperties]::SetName($button, $entryInfo.Content)

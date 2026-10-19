@@ -20,8 +20,16 @@ function Invoke-WPFundoall {
 
         $total = @($Tweaks).Count
         Write-WinUtilLog -Component "Tweaks" -Message "Undo tweaks requested: $total selected tweak(s)."
+        $sync.CancelRequested = $false
 
         for ($i = 0; $i -lt $total; $i++) {
+            if ($sync.CancelRequested) {
+                Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [CANCELLED] Undo tweaks cancelled by user after $i step(s)." -ForegroundColor Yellow
+                Write-WinUtilLog -Component "Tweaks" -Message "Undo tweaks cancelled by user after $i steps."
+                Step-WinUtilJob -Status "Undo tweaks cancelled by user" -Percent ([int](($i / $total) * 100))
+                break
+            }
+
             Step-WinUtilJob -Status "Undoing $($Tweaks[$i]) ($($i + 1)/$total)" -Percent ([int](($i / $total) * 100))
             Measure-WinUtilStep -Scope "Undo tweaks" -Name $Tweaks[$i] -ScriptBlock {
                 Invoke-WinUtiltweaks $Tweaks[$i] -undo $true

@@ -448,6 +448,7 @@ Describe "XAML and sync wiring" {
             "StopWatchdogTimer",
             "IconFetchRunning",
             "EnterpriseMode",
+            "CancelRequested",
             "selected",
             "selectedAppx",
             "selectedApps",

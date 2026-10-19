@@ -41,6 +41,8 @@ function Invoke-WPFButton {
     # Feature installation owns its selection validation and snapshots the selection before it
     $isConfigWork = $featureEntry -and $Button -ne "WPFFeatureInstall" -and
         $Button -ne "WPFFixesSmartBulkRename" -and
+        $Button -ne "WPFTakeOwnershipAdd" -and
+        $Button -ne "WPFTakeOwnershipRemove" -and
         ($Button -notlike "WPFPanel*" -or $featureEntry.function)
 
     if ($isConfigWork -or $workButtons -contains $Button) {
@@ -180,6 +182,12 @@ function Invoke-WPFButtonAction {
         "WPFAddUltPerf" {Invoke-WPFUltimatePerformance -Enable}
         "WPFRemoveUltPerf" {Invoke-WPFUltimatePerformance}
         "WPFundoall" {Invoke-WPFundoall}
+        "WPFCancelTweaks" {
+            $sync.CancelRequested = $true
+            Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [CANCEL] Cancellation requested by user..." -ForegroundColor Yellow
+            Write-WinUtilLog -Component "Tweaks" -Message "User clicked Cancel Tweaks."
+            Step-WinUtilJob -Status "Cancelling tweaks..."
+        }
         "WPFUpdatesdefault" {Invoke-WPFUpdatesdefault}
         "WPFUpdatesdisable" {
             if ($sync.EnterpriseMode) {

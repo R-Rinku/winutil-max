@@ -75,7 +75,16 @@ function Invoke-WPFtweaksbutton {
       }
     }
 
+    $sync.CancelRequested = $false
+
     foreach ($tweak in $tweaksToRun) {
+      if ($sync.CancelRequested) {
+        Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [CANCELLED] Tweaks execution cancelled by user after $completedSteps step(s)." -ForegroundColor Yellow
+        Write-WinUtilLog -Component "Tweaks" -Message "Tweaks execution cancelled by user after $completedSteps step(s)."
+        Step-WinUtilJob -Status "Tweaks cancelled by user" -Percent ([int](($completedSteps / $totalSteps) * 100))
+        break
+      }
+
       Step-WinUtilJob -Status "Applying $tweak ($($completedSteps + 1)/$totalSteps)" -Percent ([int](($completedSteps / $totalSteps) * 100))
       Measure-WinUtilStep -Scope "Tweaks" -Name $tweak -ScriptBlock {
         Invoke-WinUtilTweaks $tweak
@@ -85,7 +94,7 @@ function Invoke-WPFtweaksbutton {
     }
 
     # Run Disk Cleanup at the very end of all tweaks as requested
-    if ($hasDiskCleanup) {
+    if ($hasDiskCleanup -and -not $sync.CancelRequested) {
       $noticeMsg = "Disk Cleanup: Notice - this may take several minutes depending on temp and update cache size."
       Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [NOTICE] Running Disk Cleanup at the end of tweaks. This may take several minutes depending on system temp and Windows Update cache..." -ForegroundColor Yellow
       Write-WinUtilLog -Component "Tweaks" -Message "Disk Cleanup scheduled at the end of tweaks. Running cleanmgr and component cleanup..."

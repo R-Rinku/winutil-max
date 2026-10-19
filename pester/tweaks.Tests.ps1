@@ -439,6 +439,23 @@ Describe "Invoke-WPFtweaksbutton" {
             $Status -eq "Applying WPFTweaksTelemetry (2/2)" -and $Percent -eq 50
         }
     }
+
+    It "stops running tweaks when cancellation is requested" {
+        $script:sync.selectedTweaks.Add("WPFTweaksTelemetry")
+        $script:sync.selectedTweaks.Add("WPFTweaksLocation")
+        Mock Invoke-WinUtilTweaks {
+            $script:sync.CancelRequested = $true
+        }
+
+        Invoke-WPFtweaksbutton
+        $jobParameters = $script:capturedTweaksJob.Parameters
+        & $script:capturedTweaksJob.ScriptBlock @jobParameters
+
+        Should -Invoke -CommandName Invoke-WinUtilTweaks -Times 1 -Exactly
+        Should -Invoke -CommandName Step-WinUtilJob -Times 1 -Exactly -ParameterFilter {
+            $Status -eq "Tweaks cancelled by user"
+        }
+    }
 }
 
 Describe "Invoke-WPFundoall" {
