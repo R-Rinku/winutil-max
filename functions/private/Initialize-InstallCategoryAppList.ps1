@@ -22,6 +22,7 @@ function Initialize-InstallCategoryAppList {
         # Indexed, not dynamic member, lookup: the latter goes through the PSObject adapter and
         # costs about seventy times as much per app.
         foreach ($appKey in $Apps.Keys) {
+            if ($appKey.StartsWith("WPFInstall")) { continue }
             $category = $Apps[$appKey].Category
             if (-not $appsByCategory.ContainsKey($category)) {
                 $appsByCategory[$category] = [System.Collections.Generic.List[string]]::new()

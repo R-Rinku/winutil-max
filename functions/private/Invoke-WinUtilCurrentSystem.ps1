@@ -18,6 +18,7 @@ Function Invoke-WinUtilCurrentSystem {
     if ($CheckBox -eq "choco") {
         $apps = (choco list | Select-String -Pattern "^\S+").Matches.Value
         $sync.configs.applicationsHashtable.GetEnumerator() | ForEach-Object {
+            if (-not $_.Key.StartsWith("WPFInstall")) { return }
             $packageId = ($_.Value.choco -split ";")[-1].Trim()
             if ($packageId -ne "na" -and $packageId -in $apps) {
                 Write-Output $_.Key
@@ -39,6 +40,7 @@ Function Invoke-WinUtilCurrentSystem {
         $installedProgramText = $installedProgramOutput -join "`n"
 
         $sync.configs.applicationsHashtable.GetEnumerator() | ForEach-Object {
+            if (-not $_.Key.StartsWith("WPFInstall")) { return }
             $packageId = (($_.Value.winget -split ";")[-1] -replace "^msstore:", "").Trim()
             if ([string]::IsNullOrWhiteSpace($packageId) -or $packageId -eq "na") {
                 return

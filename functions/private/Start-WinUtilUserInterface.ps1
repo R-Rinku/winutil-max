@@ -211,8 +211,7 @@ function Start-WinUtilUserInterface {
                 "I" { Invoke-WPFButton "WPFTab1BT"; $keyEventArgs.Handled = $true } # Navigate to Install tab and suppress Windows Warning Sound
                 "T" { Invoke-WPFButton "WPFTab2BT"; $keyEventArgs.Handled = $true } # Navigate to Tweaks tab
                 "C" { Invoke-WPFButton "WPFTab3BT"; $keyEventArgs.Handled = $true } # Navigate to Config tab
-                "A" { Invoke-WPFButton "WPFTab4BT"; $keyEventArgs.Handled = $true } # Navigate to Activation tab
-                "U" { Invoke-WPFButton "WPFTab4BT"; $keyEventArgs.Handled = $true } # Navigate to Activation tab (legacy shortcut)
+                "U" { Invoke-WPFButton "WPFTab4BT"; $keyEventArgs.Handled = $true } # Navigate to Updates tab
                 "W" { Invoke-WPFButton "WPFTab5BT"; $keyEventArgs.Handled = $true } # Navigate to Win11ISO tab
             }
         }
@@ -254,6 +253,7 @@ function Start-WinUtilUserInterface {
     $sync["Form"].Add_MouseDoubleClick({
         if ($_.OriginalSource.Name -eq "NavDockPanel" -or
             $_.OriginalSource.Name -eq "GridBesideNavDockPanel" -or
+            $_.OriginalSource.Name -eq "WPFTitleBar" -or
             $_.OriginalSource -is [System.Windows.Controls.Grid] -or
             $_.OriginalSource -is [System.Windows.Controls.Border]) {
                 if ($sync["Form"].WindowState -eq [Windows.WindowState]::Normal) {
@@ -279,13 +279,14 @@ function Start-WinUtilUserInterface {
             $workingArea = $primaryScreen.WorkingArea
             $screenWidth = $workingArea.Width
             $screenHeight = $workingArea.Height
-            $sync.Form.MinWidth = [Math]::Min([double]$sync.Form.MinWidth, [double]$screenWidth)
+            $sync.Form.MinWidth = [Math]::Min(800, [double]$screenWidth)
+            $sync.Form.MinHeight = [Math]::Min(550, [double]$screenHeight)
 
-            # Ensure compatible sizing: default to comfortable 1260x820 or up to 92-94% of working area on smaller screens
-            $targetWidth = [Math]::Min(1260, [int]($screenWidth * 0.94))
-            $targetHeight = [Math]::Min(820, [int]($screenHeight * 0.90))
-            $sync.Form.Width = [Math]::Max(950, $targetWidth)
-            $sync.Form.Height = [Math]::Max(650, $targetHeight)
+            # Ensure open, adjustable compatible sizing like original Chris Titus WinUtil
+            $targetWidth = [Math]::Min(1180, [int]($screenWidth * 0.92))
+            $targetHeight = [Math]::Min(760, [int]($screenHeight * 0.88))
+            $sync.Form.Width = [Math]::Max(800, $targetWidth)
+            $sync.Form.Height = [Math]::Max(550, $targetHeight)
 
             # Center window cleanly on the display working area
             $sync.Form.Left = [Math]::Max(0, [int]($workingArea.Left + ($screenWidth - $sync.Form.Width) / 2))
@@ -387,7 +388,8 @@ function Start-WinUtilUserInterface {
     $sync["Form"].Add_Loaded({
         param($e)
         $null = $e
-        $sync.Form.MinWidth = "950"
+        $sync.Form.MinWidth = "800"
+        $sync.Form.MinHeight = "550"
         $sync["Form"].MaxWidth = [Double]::PositiveInfinity
         $sync["Form"].MaxHeight = [Double]::PositiveInfinity
 

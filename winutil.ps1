@@ -1946,6 +1946,7 @@ function Initialize-InstallCategoryAppList {
         # Indexed, not dynamic member, lookup: the latter goes through the PSObject adapter and
         # costs about seventy times as much per app.
         foreach ($appKey in $Apps.Keys) {
+            if ($appKey.StartsWith("WPFInstall")) { continue }
             $category = $Apps[$appKey].Category
             if (-not $appsByCategory.ContainsKey($category)) {
                 $appsByCategory[$category] = [System.Collections.Generic.List[string]]::new()
@@ -2143,8 +2144,8 @@ function Initialize-WinUtilTabContent {
             "Config" {
                 Invoke-WPFUIElements -configVariable $sync.configs.feature -targetGridName "featurespanel" -columncount 2 -Yield:$Yield
             }
-            "Activation" {
-                # Activation tab content is statically defined in XAML
+            "Updates" {
+                # Updates tab content is statically defined in XAML
             }
             "AppX" {
                 Invoke-WPFUIElements -configVariable $sync.configs.appx -targetGridName "appxpanel" -columncount 2 -Yield:$Yield
@@ -3005,6 +3006,7 @@ Function Invoke-WinUtilCurrentSystem {
     if ($CheckBox -eq "choco") {
         $apps = (choco list | Select-String -Pattern "^\S+").Matches.Value
         $sync.configs.applicationsHashtable.GetEnumerator() | ForEach-Object {
+            if (-not $_.Key.StartsWith("WPFInstall")) { return }
             $packageId = ($_.Value.choco -split ";")[-1].Trim()
             if ($packageId -ne "na" -and $packageId -in $apps) {
                 Write-Output $_.Key
@@ -3026,6 +3028,7 @@ Function Invoke-WinUtilCurrentSystem {
         $installedProgramText = $installedProgramOutput -join "`n"
 
         $sync.configs.applicationsHashtable.GetEnumerator() | ForEach-Object {
+            if (-not $_.Key.StartsWith("WPFInstall")) { return }
             $packageId = (($_.Value.winget -split ";")[-1] -replace "^msstore:", "").Trim()
             if ([string]::IsNullOrWhiteSpace($packageId) -or $packageId -eq "na") {
                 return
@@ -7928,8 +7931,7 @@ function Start-WinUtilUserInterface {
                 "I" { Invoke-WPFButton "WPFTab1BT"; $keyEventArgs.Handled = $true } # Navigate to Install tab and suppress Windows Warning Sound
                 "T" { Invoke-WPFButton "WPFTab2BT"; $keyEventArgs.Handled = $true } # Navigate to Tweaks tab
                 "C" { Invoke-WPFButton "WPFTab3BT"; $keyEventArgs.Handled = $true } # Navigate to Config tab
-                "A" { Invoke-WPFButton "WPFTab4BT"; $keyEventArgs.Handled = $true } # Navigate to Activation tab
-                "U" { Invoke-WPFButton "WPFTab4BT"; $keyEventArgs.Handled = $true } # Navigate to Activation tab (legacy shortcut)
+                "U" { Invoke-WPFButton "WPFTab4BT"; $keyEventArgs.Handled = $true } # Navigate to Updates tab
                 "W" { Invoke-WPFButton "WPFTab5BT"; $keyEventArgs.Handled = $true } # Navigate to Win11ISO tab
             }
         }
@@ -7971,6 +7973,7 @@ function Start-WinUtilUserInterface {
     $sync["Form"].Add_MouseDoubleClick({
         if ($_.OriginalSource.Name -eq "NavDockPanel" -or
             $_.OriginalSource.Name -eq "GridBesideNavDockPanel" -or
+            $_.OriginalSource.Name -eq "WPFTitleBar" -or
             $_.OriginalSource -is [System.Windows.Controls.Grid] -or
             $_.OriginalSource -is [System.Windows.Controls.Border]) {
                 if ($sync["Form"].WindowState -eq [Windows.WindowState]::Normal) {
@@ -7996,13 +7999,14 @@ function Start-WinUtilUserInterface {
             $workingArea = $primaryScreen.WorkingArea
             $screenWidth = $workingArea.Width
             $screenHeight = $workingArea.Height
-            $sync.Form.MinWidth = [Math]::Min([double]$sync.Form.MinWidth, [double]$screenWidth)
+            $sync.Form.MinWidth = [Math]::Min(800, [double]$screenWidth)
+            $sync.Form.MinHeight = [Math]::Min(550, [double]$screenHeight)
 
-            # Ensure compatible sizing: default to comfortable 1260x820 or up to 92-94% of working area on smaller screens
-            $targetWidth = [Math]::Min(1260, [int]($screenWidth * 0.94))
-            $targetHeight = [Math]::Min(820, [int]($screenHeight * 0.90))
-            $sync.Form.Width = [Math]::Max(950, $targetWidth)
-            $sync.Form.Height = [Math]::Max(650, $targetHeight)
+            # Ensure open, adjustable compatible sizing like original Chris Titus WinUtil
+            $targetWidth = [Math]::Min(1180, [int]($screenWidth * 0.92))
+            $targetHeight = [Math]::Min(760, [int]($screenHeight * 0.88))
+            $sync.Form.Width = [Math]::Max(800, $targetWidth)
+            $sync.Form.Height = [Math]::Max(550, $targetHeight)
 
             # Center window cleanly on the display working area
             $sync.Form.Left = [Math]::Max(0, [int]($workingArea.Left + ($screenWidth - $sync.Form.Width) / 2))
@@ -8104,7 +8108,8 @@ function Start-WinUtilUserInterface {
     $sync["Form"].Add_Loaded({
         param($e)
         $null = $e
-        $sync.Form.MinWidth = "950"
+        $sync.Form.MinWidth = "800"
+        $sync.Form.MinHeight = "550"
         $sync["Form"].MaxWidth = [Double]::PositiveInfinity
         $sync["Form"].MaxHeight = [Double]::PositiveInfinity
 
@@ -9529,47 +9534,6 @@ function Write-WinUtilAutoRunSummary {
     return 0
 }
 
-function Invoke-WPFActivationStatus {
-    <#
-    .SYNOPSIS
-        Checks Windows license and activation expiration status.
-    #>
-    [CmdletBinding()]
-    param()
-
-    Write-WinUtilLog -Component "Activation" -Message "Checking Windows license activation status."
-    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Checking Windows activation status..." -ForegroundColor Cyan
-
-    try {
-        Start-Process -FilePath "slmgr.vbs" -ArgumentList "/xpr"
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Activation status dialog requested." -ForegroundColor Green
-    } catch {
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to query activation status: $($_.Exception.Message)" -ForegroundColor Red
-        Write-WinUtilLog -Component "Activation" -Message "Failed to query activation: $($_.Exception.Message)" -Level "ERROR"
-    }
-}
-
-function Invoke-WPFOpenStandardShell {
-    <#
-    .SYNOPSIS
-        Opens an interactive PowerShell console in the user's home directory.
-    #>
-    [CmdletBinding()]
-    param()
-
-    Write-WinUtilLog -Component "Activation" -Message "Opening user PowerShell terminal."
-    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Opening PowerShell terminal in user profile..." -ForegroundColor Cyan
-
-    try {
-        Start-Process powershell.exe -ArgumentList "-NoExit" -WorkingDirectory $env:USERPROFILE
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] PowerShell terminal opened." -ForegroundColor Green
-        Write-WinUtilLog -Component "Activation" -Message "PowerShell opened successfully."
-    } catch {
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to open terminal: $($_.Exception.Message)" -ForegroundColor Red
-        Write-WinUtilLog -Component "Activation" -Message "Failed to open terminal." -Level "ERROR"
-    }
-}
-
 function Invoke-WPFAppxInstall {
     if ($null -eq $sync.selectedAppx -or $sync.selectedAppx.Count -eq 0) {
         Show-WinUtilMessage -Message "No AppX Package selected" -Title "Error" -Button "OK" -Icon "Error"
@@ -9876,12 +9840,6 @@ function Invoke-WPFButtonAction {
             Invoke-WPFUpdatesdisable -Confirmed:$UpdatesDisableConfirmed
         }
         "WPFUpdatessecurity" {Invoke-WPFUpdatessecurity}
-        "WPFActivationOpenShell" {Invoke-WPFOpenStandardShell}
-        "WPFActivationStatus" {Invoke-WPFActivationStatus}
-        "WPFSpicetifyInstall" {Invoke-WPFSpicetifyInstall}
-        "WPFSpicetifyMarketplace" {Invoke-WPFSpicetifyMarketplace}
-        "WPFSpicetifyCopy" {Invoke-WPFSpicetifyCopy}
-        "WPFSpicetifyOpenShell" {Invoke-WPFOpenStandardShell}
         "WPFGetInstalled" {Invoke-WPFGetInstalled -CheckBox "winget"}
         "WPFGetInstalledTweaks" {Invoke-WPFGetInstalled -CheckBox "tweaks"}
         "WPFAppxRemoval" {
@@ -11486,97 +11444,6 @@ function Invoke-WPFSmartBulkRename {
 
     $form.ShowDialog() | Out-Null
 }
-
-function Invoke-WPFSpicetifyInstall {
-    <#
-    .SYNOPSIS
-        Installs Spicetify CLI for customizing and modding the Spotify Desktop client.
-    .DESCRIPTION
-        Spicetify (https://spicetify.app/) is a multi-platform command-line tool to customize
-        the official Spotify client, supporting themes, extensions, custom apps, and ad-blocking.
-        Runs in standard (unelevated) user context to install directly under the user's Spotify directory.
-    .LINK
-        https://spicetify.app/
-    #>
-    [CmdletBinding()]
-    param()
-
-    Write-WinUtilLog -Component "Activation" -Message "Launching Spicetify CLI installation in standard user shell."
-    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Launching Spicetify CLI installation..." -ForegroundColor Cyan
-
-    try {
-        $cmd = "Write-Host '========================================' -ForegroundColor Green; " +
-               "Write-Host '   Installing Spicetify CLI for Spotify' -ForegroundColor Cyan; " +
-               "Write-Host '   Running in Standard User Shell' -ForegroundColor Gray; " +
-               "Write-Host '========================================`n' -ForegroundColor Green; " +
-               "iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex; " +
-               "Write-Host '`n[Done] Press any key to close this window...' -ForegroundColor Yellow; " +
-               "`$null = `$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')"
-
-        $arg = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
-
-        Start-Process powershell.exe -ArgumentList $arg -WorkingDirectory $env:USERPROFILE
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify installer launched in user shell." -ForegroundColor Green
-        Write-WinUtilLog -Component "Activation" -Message "Spicetify installer launched successfully."
-    } catch {
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to start Spicetify installer: $($_.Exception.Message)" -ForegroundColor Red
-        Write-WinUtilLog -Component "Activation" -Message "Failed to start Spicetify installer: $($_.Exception.Message)" -Level "ERROR"
-    }
-}
-
-function Invoke-WPFSpicetifyMarketplace {
-    <#
-    .SYNOPSIS
-        Installs Spicetify Marketplace into Spotify for easy downloading of themes and extensions.
-    #>
-    [CmdletBinding()]
-    param()
-
-    Write-WinUtilLog -Component "Activation" -Message "Launching Spicetify Marketplace installation in standard user shell."
-    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Launching Spicetify Marketplace installation..." -ForegroundColor Cyan
-
-    try {
-        $cmd = "Write-Host '============================================' -ForegroundColor Green; " +
-               "Write-Host '   Installing Spicetify Marketplace Extension' -ForegroundColor Cyan; " +
-               "Write-Host '   Running in Standard User Shell' -ForegroundColor Gray; " +
-               "Write-Host '============================================`n' -ForegroundColor Green; " +
-               "iwr -useb https://raw.githubusercontent.com/spicetify/spicetify-marketplace/main/resources/install.ps1 | iex; " +
-               "Write-Host '`n[Done] Press any key to close this window...' -ForegroundColor Yellow; " +
-               "`$null = `$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')"
-
-        $arg = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
-
-        Start-Process powershell.exe -ArgumentList $arg -WorkingDirectory $env:USERPROFILE
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify Marketplace installer launched in user shell." -ForegroundColor Green
-        Write-WinUtilLog -Component "Activation" -Message "Spicetify Marketplace installer launched."
-    } catch {
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to start Spicetify Marketplace installer: $($_.Exception.Message)" -ForegroundColor Red
-        Write-WinUtilLog -Component "Activation" -Message "Failed to start Marketplace: $($_.Exception.Message)" -Level "ERROR"
-    }
-}
-
-function Invoke-WPFSpicetifyCopy {
-    <#
-    .SYNOPSIS
-        Copies the Spicetify CLI install command to clipboard.
-    #>
-    [CmdletBinding()]
-    param()
-
-    $cmd = "iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex"
-    try {
-        Set-Clipboard -Value $cmd
-        Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Copied Spicetify command to clipboard: $cmd" -ForegroundColor Green
-        Write-WinUtilLog -Component "Activation" -Message "Copied Spicetify command to clipboard: $cmd"
-        if ($sync.WPFSpicetifyCopy) {
-            $sync.WPFSpicetifyCopy.Content = "Copied!"
-        }
-    } catch {
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to copy to clipboard: $($_.Exception.Message)" -ForegroundColor Red
-        Write-WinUtilLog -Component "Activation" -Message "Failed to copy to clipboard: $($_.Exception.Message)" -Level "ERROR"
-    }
-}
-
 
 function Invoke-WPFSSHServer {
     <#
@@ -14582,7 +14449,7 @@ $sync.configs.applications = @'
                             },
     "WPFInstallprocessmonitor":  {
                                      "category":  "Microsoft Tools",
-                                     "choco":  "procexp",
+                                     "choco":  "procmon",
                                      "content":  "Process Monitor",
                                      "description":  "SysInternals Process Monitor is an advanced monitoring tool that shows real-time file system, registry, and process/thread activity.",
                                      "link":  "https://docs.microsoft.com/en-us/sysinternals/downloads/procmon",
@@ -18051,13 +17918,13 @@ $inputXML = @'
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
         WindowStyle="SingleBorderWindow"
-        Width="1260"
-        Height="820"
-        MinWidth="950"
-        MinHeight="600"
+        Width="1180"
+        Height="760"
+        MinWidth="800"
+        MinHeight="550"
         Title="winutil-MAX - Running Up That Hill">
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="0" CornerRadius="10" UseAeroCaptionButtons="False" ResizeBorderThickness="6"/>
+        <WindowChrome CaptionHeight="30" CornerRadius="10" UseAeroCaptionButtons="False" ResizeBorderThickness="6"/>
     </WindowChrome.WindowChrome>
     <Window.Resources>
     <Style TargetType="ToolTip">
@@ -19073,6 +18940,8 @@ $inputXML = @'
     </Window.Resources>
     <Grid Background="{DynamicResource MainBackgroundColor}" ShowGridLines="False" Name="WPFMainGrid" Width="Auto" Height="Auto" HorizontalAlignment="Stretch">
         <Grid.RowDefinitions>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -19081,120 +18950,63 @@ $inputXML = @'
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
-        <!-- Offline banner -->
-        <Border Name="WPFOfflineBanner" Grid.Row="0" Background="#8B0000" Visibility="Collapsed" Padding="6,4">
-            <TextBlock Text="&#x26A0; Offline Mode - No Internet Connection" Foreground="White" FontWeight="Bold"
-                HorizontalAlignment="Center" FontSize="13" Background="Transparent"/>
-        </Border>
-        <Grid Grid.Row="1" Background="{DynamicResource MainBackgroundColor}">
+
+        <!-- Row 0: Slim Draggable Title Bar with Stranger Things Glowing Pulse -->
+        <Grid Name="WPFTitleBar" Grid.Row="0" Height="30" Background="{DynamicResource MainBackgroundColor}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/> <!-- Navigation buttons -->
-                <ColumnDefinition Width="*"/> <!-- Search bar and buttons -->
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Navigation Buttons Panel -->
-            <StackPanel Name="NavDockPanel" Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center" Margin="5,5,10,5">
-                <StackPanel Name="NavLogoPanel" Orientation="Horizontal" HorizontalAlignment="Left" Background="{DynamicResource MainBackgroundColor}" SnapsToDevicePixels="True" Margin="10,0,20,0">
-                </StackPanel>
-                <ToggleButton Style="{StaticResource TabToggleButton}" Margin="0,0,5,0" Height="{DynamicResource TabButtonHeight}" Width="{DynamicResource TabButtonWidth}"
-                    Background="{DynamicResource ButtonInstallBackgroundColor}" Foreground="white" FontWeight="Bold" Name="WPFTab1BT">
-                    <ToggleButton.Content>
-                        <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonInstallForegroundColor}" >
-                            <Underline>I</Underline>nstall
-                        </TextBlock>
-                    </ToggleButton.Content>
-                </ToggleButton>
-                <ToggleButton Style="{StaticResource TabToggleButton}" Margin="0,0,5,0" Height="{DynamicResource TabButtonHeight}" Width="{DynamicResource TabButtonWidth}"
-                    Background="{DynamicResource ButtonTweaksBackgroundColor}" Foreground="{DynamicResource ButtonTweaksForegroundColor}" FontWeight="Bold" Name="WPFTab2BT">
-                    <ToggleButton.Content>
-                        <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonTweaksForegroundColor}">
-                            <Underline>T</Underline>weaks
-                        </TextBlock>
-                    </ToggleButton.Content>
-                </ToggleButton>
-                <ToggleButton Style="{StaticResource TabToggleButton}" Margin="0,0,5,0" Height="{DynamicResource TabButtonHeight}" Width="{DynamicResource TabButtonWidth}"
-                    Background="{DynamicResource ButtonConfigBackgroundColor}" Foreground="{DynamicResource ButtonConfigForegroundColor}" FontWeight="Bold" Name="WPFTab3BT">
-                    <ToggleButton.Content>
-                        <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonConfigForegroundColor}">
-                            <Underline>C</Underline>onfig
-                        </TextBlock>
-                    </ToggleButton.Content>
-                </ToggleButton>
-                <ToggleButton Style="{StaticResource TabToggleButton}" Margin="0,0,5,0" Height="{DynamicResource TabButtonHeight}" Width="{DynamicResource TabButtonWidth}"
-                    Background="{DynamicResource ButtonUpdatesBackgroundColor}" Foreground="{DynamicResource ButtonUpdatesForegroundColor}" FontWeight="Bold" Name="WPFTab4BT">
-                    <ToggleButton.Content>
-                        <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonUpdatesForegroundColor}">
-                            <Underline>A</Underline>ctivation
-                        </TextBlock>
-                    </ToggleButton.Content>
-                </ToggleButton>
-                <ToggleButton Style="{StaticResource TabToggleButton}" Margin="0,0,5,0" Height="{DynamicResource TabButtonHeight}" Width="Auto" MinWidth="{DynamicResource TabButtonWidth}"
-                    Background="{DynamicResource ButtonWin11ISOBackgroundColor}" Foreground="{DynamicResource ButtonWin11ISOForegroundColor}" FontWeight="Bold" Name="WPFTab5BT">
-                    <ToggleButton.Content>
-                        <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonWin11ISOForegroundColor}">
-                            <Underline>W</Underline>in11 Creator
-                        </TextBlock>
-                    </ToggleButton.Content>
-                </ToggleButton>
-            </StackPanel>
+            <!-- Stranger Things Animated Glowing Title -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,10,0">
+                <TextBlock Text="WINUTIL-MAX"
+                           FontFamily="Century Gothic, Segoe UI, Trebuchet MS, Arial"
+                           FontWeight="Black"
+                           FontSize="13"
+                           Foreground="#FF2A3A"
+                           VerticalAlignment="Center"
+                           IsHitTestVisible="False">
+                    <TextBlock.Effect>
+                        <DropShadowEffect x:Name="NeonGlow" Color="#FF1824" BlurRadius="8" ShadowDepth="0" Opacity="0.85"/>
+                    </TextBlock.Effect>
+                    <TextBlock.Triggers>
+                        <EventTrigger RoutedEvent="TextBlock.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                    <DoubleAnimation Storyboard.TargetName="NeonGlow"
+                                                     Storyboard.TargetProperty="BlurRadius"
+                                                     From="6" To="14" Duration="0:0:2.2"/>
+                                    <DoubleAnimation Storyboard.TargetName="NeonGlow"
+                                                     Storyboard.TargetProperty="Opacity"
+                                                     From="0.65" To="1.0" Duration="0:0:2.2"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </TextBlock.Triggers>
+                </TextBlock>
 
-            <!-- Search Bar and Action Buttons -->
-            <Grid Name="GridBesideNavDockPanel" Grid.Column="1" Background="{DynamicResource MainBackgroundColor}" ShowGridLines="False" Height="Auto">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>    <!-- Draggable space / Breathing room -->
-                    <ColumnDefinition Width="Auto"/> <!-- Search bar area -->
-                    <ColumnDefinition Width="Auto"/> <!-- Buttons area -->
-                </Grid.ColumnDefinitions>
-
-                <!-- Draggable Middle Spacer -->
-                <Border Grid.Column="0" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <TextBlock Text="winutil-MAX"
-                               VerticalAlignment="Center"
-                               HorizontalAlignment="Left"
-                               Margin="15,0,0,0"
-                               FontSize="12"
-                               FontWeight="SemiBold"
-                               Opacity="0.30"
-                               Foreground="{DynamicResource MainForegroundColor}"
+                <Border Background="#33FF1824" CornerRadius="3" Margin="10,0,0,0" Padding="6,2" VerticalAlignment="Center">
+                    <TextBlock Text="RUNNING UP THAT HILL"
+                               FontFamily="Segoe UI"
+                               FontSize="9"
+                               FontWeight="Bold"
+                               Foreground="#FF5565"
+                               Opacity="0.85"
                                IsHitTestVisible="False"/>
                 </Border>
+            </StackPanel>
 
-                <Border Grid.Column="1" Margin="5,0,10,0" Width="220" Height="{DynamicResource SearchBarHeight}" VerticalAlignment="Center" HorizontalAlignment="Right">
-                    <Grid>
-                        <TextBox
-                            Height="{DynamicResource SearchBarHeight}"
-                            FontSize="{DynamicResource SearchBarTextBoxFontSize}"
-                            VerticalAlignment="Center" HorizontalAlignment="Stretch"
-                            BorderThickness="1"
-                            Name="SearchBar"
-                            Foreground="{DynamicResource MainForegroundColor}" Background="{DynamicResource MainBackgroundColor}"
-                            Padding="3,3,30,0"
-                            ToolTip="Press Ctrl-F and type app name to filter application list below. Press Esc to reset the filter"
-                            AutomationProperties.Name="Search">
-                        </TextBox>
-                        <TextBlock
-                            Name="SearchBarIcon"
-                            VerticalAlignment="Center" HorizontalAlignment="Right"
-                            FontFamily="Segoe MDL2 Assets"
-                            Foreground="{DynamicResource ButtonBackgroundSelectedColor}"
-                            FontSize="{DynamicResource IconFontSize}"
-                            Margin="0,0,8,0" Width="Auto" Height="Auto">&#xE721;
-                        </TextBlock>
-                        <Button
-                            VerticalAlignment="Center" HorizontalAlignment="Right"
-                            Name="SearchBarClearButton"
-                            Style="{StaticResource SearchBarClearButtonStyle}"
-                            AutomationProperties.Name="Clear Search"
-                            Margin="0,0,20,0" Visibility="Collapsed">
-                        </Button>
-                    </Grid>
-                </Border>
+            <!-- Draggable Window Space (Middle) -->
+            <Border Grid.Column="1" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
 
-                <!-- Buttons Container -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="5,5,5,5">
-                    <Button Name="ThemeButton"
-                        Style="{StaticResource HoverButtonStyle}"
-                        BorderBrush="Transparent"
+            <!-- Top Right Action & Caption Buttons -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0" Grid.Column="2">
+                <Button Name="ThemeButton"
+                    WindowChrome.IsHitTestVisibleInChrome="True"
+                    Style="{StaticResource HoverButtonStyle}"
+                    BorderBrush="Transparent"
                     Background="{DynamicResource MainBackgroundColor}"
                     Foreground="{DynamicResource MainForegroundColor}"
                     FontSize="{DynamicResource SettingsIconFontSize}"
@@ -19204,9 +19016,8 @@ $inputXML = @'
                     FontFamily="Segoe MDL2 Assets"
                     Content="N/A"
                     ToolTip="Change the WinUtil UI Theme"
-                    AutomationProperties.Name="Theme"
-                />
-                    <Popup Name="ThemePopup"
+                    AutomationProperties.Name="Theme"/>
+                <Popup Name="ThemePopup"
                     IsOpen="False"
                     PlacementTarget="{Binding ElementName=ThemeButton}" Placement="Bottom"
                     HorizontalAlignment="Right" VerticalAlignment="Top">
@@ -19231,9 +19042,10 @@ $inputXML = @'
                     </Border>
                 </Popup>
 
-                    <Button Name="FontScalingButton"
-                        Style="{StaticResource HoverButtonStyle}"
-                        BorderBrush="Transparent"
+                <Button Name="FontScalingButton"
+                    WindowChrome.IsHitTestVisibleInChrome="True"
+                    Style="{StaticResource HoverButtonStyle}"
+                    BorderBrush="Transparent"
                     Background="{DynamicResource MainBackgroundColor}"
                     Foreground="{DynamicResource MainForegroundColor}"
                     FontSize="{DynamicResource SettingsIconFontSize}"
@@ -19243,9 +19055,8 @@ $inputXML = @'
                     FontFamily="Segoe MDL2 Assets"
                     Content="&#xE8D3;"
                     ToolTip="Adjust Font Scaling for Accessibility"
-                    AutomationProperties.Name="Font Scaling"
-                />
-                    <Popup Name="FontScalingPopup"
+                    AutomationProperties.Name="Font Scaling"/>
+                <Popup Name="FontScalingPopup"
                     IsOpen="False"
                     PlacementTarget="{Binding ElementName=FontScalingButton}" Placement="Bottom"
                     HorizontalAlignment="Right" VerticalAlignment="Top">
@@ -19304,9 +19115,10 @@ $inputXML = @'
                     </Border>
                 </Popup>
 
-                    <Button Name="SettingsButton"
-                        Style="{StaticResource HoverButtonStyle}"
-                        BorderBrush="Transparent"
+                <Button Name="SettingsButton"
+                    WindowChrome.IsHitTestVisibleInChrome="True"
+                    Style="{StaticResource HoverButtonStyle}"
+                    BorderBrush="Transparent"
                     Background="{DynamicResource MainBackgroundColor}"
                     Foreground="{DynamicResource MainForegroundColor}"
                     FontSize="{DynamicResource SettingsIconFontSize}"
@@ -19317,7 +19129,7 @@ $inputXML = @'
                     ToolTip="Settings"
                     AutomationProperties.Name="Settings"
                     Content="&#xE713;"/>
-                    <Popup Name="SettingsPopup"
+                <Popup Name="SettingsPopup"
                     IsOpen="False"
                     PlacementTarget="{Binding ElementName=SettingsButton}" Placement="Bottom"
                     HorizontalAlignment="Right" VerticalAlignment="Top">
@@ -19347,68 +19159,180 @@ $inputXML = @'
                     </Border>
                 </Popup>
 
-                    <Button
-                        Content="&#xE921;"
-                        Style="{StaticResource HoverButtonStyle}"
-                        BorderThickness="0"
-                        BorderBrush="Transparent"
-                        Background="{DynamicResource MainBackgroundColor}"
-                        Width="{DynamicResource IconButtonSize}" Height="{DynamicResource IconButtonSize}"
-                        HorizontalAlignment="Right" VerticalAlignment="Center"
-                        Margin="0"
-                        FontFamily="Segoe MDL2 Assets"
-                        Foreground="{DynamicResource MainForegroundColor}"
-                        FontSize="{DynamicResource CloseIconFontSize}"
-                        ToolTip="Minimize"
-                        AutomationProperties.Name="Minimize"
-                        Name="WPFMinimizeButton" />
-                    <Button
-                        BorderThickness="0"
-                        BorderBrush="Transparent"
-                        Background="{DynamicResource MainBackgroundColor}"
-                        Width="{DynamicResource IconButtonSize}" Height="{DynamicResource IconButtonSize}"
-                        HorizontalAlignment="Right" VerticalAlignment="Center"
-                        Margin="0,0,0,0"
-                        FontFamily="Segoe MDL2 Assets"
-                        Foreground="{DynamicResource MainForegroundColor}"
-                        FontSize="{DynamicResource CloseIconFontSize}"
-                        Name="WPFMaximizeButton">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource HoverButtonStyle}">
-                                <Setter Property="Content" Value="&#xE922;"/>
-                                <Setter Property="ToolTip" Value="Maximize"/>
-                                <Setter Property="AutomationProperties.Name" Value="Maximize"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Value="Maximized">
-                                        <Setter Property="Content" Value="&#xE923;"/>
-                                        <Setter Property="ToolTip" Value="Restore"/>
-                                        <Setter Property="AutomationProperties.Name" Value="Restore"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                <Button
+                    WindowChrome.IsHitTestVisibleInChrome="True"
+                    Content="&#xE921;"
+                    Style="{StaticResource HoverButtonStyle}"
+                    BorderThickness="0"
+                    BorderBrush="Transparent"
+                    Background="{DynamicResource MainBackgroundColor}"
+                    Width="{DynamicResource IconButtonSize}" Height="{DynamicResource IconButtonSize}"
+                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Margin="0"
+                    FontFamily="Segoe MDL2 Assets"
+                    Foreground="{DynamicResource MainForegroundColor}"
+                    FontSize="{DynamicResource CloseIconFontSize}"
+                    ToolTip="Minimize"
+                    AutomationProperties.Name="Minimize"
+                    Name="WPFMinimizeButton" />
+                <Button
+                    WindowChrome.IsHitTestVisibleInChrome="True"
+                    BorderThickness="0"
+                    BorderBrush="Transparent"
+                    Background="{DynamicResource MainBackgroundColor}"
+                    Width="{DynamicResource IconButtonSize}" Height="{DynamicResource IconButtonSize}"
+                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Margin="0,0,0,0"
+                    FontFamily="Segoe MDL2 Assets"
+                    Foreground="{DynamicResource MainForegroundColor}"
+                    FontSize="{DynamicResource CloseIconFontSize}"
+                    Name="WPFMaximizeButton">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource HoverButtonStyle}">
+                            <Setter Property="Content" Value="&#xE922;"/>
+                            <Setter Property="ToolTip" Value="Maximize"/>
+                            <Setter Property="AutomationProperties.Name" Value="Maximize"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Value="Maximized">
+                                    <Setter Property="Content" Value="&#xE923;"/>
+                                    <Setter Property="ToolTip" Value="Restore"/>
+                                    <Setter Property="AutomationProperties.Name" Value="Restore"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
 
-                    <Button
-                        Content="&#xE8BB;"
-                        Style="{StaticResource HoverButtonStyle}"
-                        BorderThickness="0"
-                        BorderBrush="Transparent"
-                        Background="{DynamicResource MainBackgroundColor}"
-                        Width="{DynamicResource IconButtonSize}" Height="{DynamicResource IconButtonSize}"
-                        HorizontalAlignment="Right" VerticalAlignment="Center"
-                        Margin="0"
-                        FontFamily="Segoe MDL2 Assets"
-                        Foreground="{DynamicResource MainForegroundColor}"
-                        FontSize="{DynamicResource CloseIconFontSize}"
-                        ToolTip="Close"
-                        AutomationProperties.Name="Close"
-                        Name="WPFCloseButton" />
+                <Button
+                    WindowChrome.IsHitTestVisibleInChrome="True"
+                    Content="&#xE8BB;"
+                    Style="{StaticResource HoverButtonStyle}"
+                    BorderThickness="0"
+                    BorderBrush="Transparent"
+                    Background="{DynamicResource MainBackgroundColor}"
+                    Width="{DynamicResource IconButtonSize}" Height="{DynamicResource IconButtonSize}"
+                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Margin="0"
+                    FontFamily="Segoe MDL2 Assets"
+                    Foreground="{DynamicResource MainForegroundColor}"
+                    FontSize="{DynamicResource CloseIconFontSize}"
+                    ToolTip="Close"
+                    AutomationProperties.Name="Close"
+                    Name="WPFCloseButton" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Row 1: Stranger Things Retro Synthwave Divider Line -->
+        <Rectangle Grid.Row="1" Height="1.5" HorizontalAlignment="Stretch">
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#001824" Offset="0.0"/>
+                    <GradientStop Color="#55FF1824" Offset="0.15"/>
+                    <GradientStop Color="#FFFF1824" Offset="0.5"/>
+                    <GradientStop Color="#55FF1824" Offset="0.85"/>
+                    <GradientStop Color="#001824" Offset="1.0"/>
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+
+        <!-- Row 2: Offline banner -->
+        <Border Name="WPFOfflineBanner" Grid.Row="2" Background="#8B0000" Visibility="Collapsed" Padding="6,4">
+            <TextBlock Text="&#x26A0; Offline Mode - No Internet Connection" Foreground="White" FontWeight="Bold"
+                HorizontalAlignment="Center" FontSize="13" Background="Transparent"/>
+        </Border>
+        <Grid Grid.Row="3" Background="{DynamicResource MainBackgroundColor}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/> <!-- Navigation buttons -->
+                <ColumnDefinition Width="*"/> <!-- Search bar and buttons -->
+            </Grid.ColumnDefinitions>
+
+            <!-- Navigation Buttons Panel -->
+            <StackPanel Name="NavDockPanel" Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center" Margin="5,5,10,5">
+                <StackPanel Name="NavLogoPanel" Orientation="Horizontal" HorizontalAlignment="Left" Background="{DynamicResource MainBackgroundColor}" SnapsToDevicePixels="True" Margin="10,0,20,0">
                 </StackPanel>
+                <ToggleButton Style="{StaticResource TabToggleButton}" Margin="0,0,5,0" Height="{DynamicResource TabButtonHeight}" Width="{DynamicResource TabButtonWidth}"
+                    Background="{DynamicResource ButtonInstallBackgroundColor}" Foreground="white" FontWeight="Bold" Name="WPFTab1BT">
+                    <ToggleButton.Content>
+                        <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonInstallForegroundColor}" >
+                            <Underline>I</Underline>nstall
+                        </TextBlock>
+                    </ToggleButton.Content>
+                </ToggleButton>
+                <ToggleButton Style="{StaticResource TabToggleButton}" Margin="0,0,5,0" Height="{DynamicResource TabButtonHeight}" Width="{DynamicResource TabButtonWidth}"
+                    Background="{DynamicResource ButtonTweaksBackgroundColor}" Foreground="{DynamicResource ButtonTweaksForegroundColor}" FontWeight="Bold" Name="WPFTab2BT">
+                    <ToggleButton.Content>
+                        <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonTweaksForegroundColor}">
+                            <Underline>T</Underline>weaks
+                        </TextBlock>
+                    </ToggleButton.Content>
+                </ToggleButton>
+                <ToggleButton Style="{StaticResource TabToggleButton}" Margin="0,0,5,0" Height="{DynamicResource TabButtonHeight}" Width="{DynamicResource TabButtonWidth}"
+                    Background="{DynamicResource ButtonConfigBackgroundColor}" Foreground="{DynamicResource ButtonConfigForegroundColor}" FontWeight="Bold" Name="WPFTab3BT">
+                    <ToggleButton.Content>
+                        <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonConfigForegroundColor}">
+                            <Underline>C</Underline>onfig
+                        </TextBlock>
+                    </ToggleButton.Content>
+                </ToggleButton>
+                <ToggleButton Style="{StaticResource TabToggleButton}" Margin="0,0,5,0" Height="{DynamicResource TabButtonHeight}" Width="{DynamicResource TabButtonWidth}"
+                    Background="{DynamicResource ButtonUpdatesBackgroundColor}" Foreground="{DynamicResource ButtonUpdatesForegroundColor}" FontWeight="Bold" Name="WPFTab4BT">
+                    <ToggleButton.Content>
+                        <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonUpdatesForegroundColor}">
+                            <Underline>U</Underline>pdates
+                        </TextBlock>
+                    </ToggleButton.Content>
+                </ToggleButton>
+                <ToggleButton Style="{StaticResource TabToggleButton}" Margin="0,0,5,0" Height="{DynamicResource TabButtonHeight}" Width="Auto" MinWidth="{DynamicResource TabButtonWidth}"
+                    Background="{DynamicResource ButtonWin11ISOBackgroundColor}" Foreground="{DynamicResource ButtonWin11ISOForegroundColor}" FontWeight="Bold" Name="WPFTab5BT">
+                    <ToggleButton.Content>
+                        <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonWin11ISOForegroundColor}">
+                            <Underline>W</Underline>in11 Creator
+                        </TextBlock>
+                    </ToggleButton.Content>
+                </ToggleButton>
+            </StackPanel>
+
+            <!-- Search Bar Area -->
+            <Grid Name="GridBesideNavDockPanel" Grid.Column="1" Background="{DynamicResource MainBackgroundColor}" ShowGridLines="False" Height="Auto">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="1" Margin="5,0,14,0" Width="260" Height="{DynamicResource SearchBarHeight}" VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <Grid>
+                        <TextBox
+                            Height="{DynamicResource SearchBarHeight}"
+                            FontSize="{DynamicResource SearchBarTextBoxFontSize}"
+                            VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                            BorderThickness="1"
+                            Name="SearchBar"
+                            Foreground="{DynamicResource MainForegroundColor}" Background="{DynamicResource MainBackgroundColor}"
+                            Padding="3,3,30,0"
+                            ToolTip="Press Ctrl-F and type app name to filter application list below. Press Esc to reset the filter"
+                            AutomationProperties.Name="Search">
+                        </TextBox>
+                        <TextBlock
+                            Name="SearchBarIcon"
+                            VerticalAlignment="Center" HorizontalAlignment="Right"
+                            FontFamily="Segoe MDL2 Assets"
+                            Foreground="{DynamicResource ButtonBackgroundSelectedColor}"
+                            FontSize="{DynamicResource IconFontSize}"
+                            Margin="0,0,8,0" Width="Auto" Height="Auto">&#xE721;
+                        </TextBlock>
+                        <Button
+                            VerticalAlignment="Center" HorizontalAlignment="Right"
+                            Name="SearchBarClearButton"
+                            Style="{StaticResource SearchBarClearButtonStyle}"
+                            AutomationProperties.Name="Clear Search"
+                            Margin="0,0,20,0" Visibility="Collapsed">
+                        </Button>
+                    </Grid>
+                </Border>
             </Grid>
         </Grid>
 
-        <TabControl Name="WPFTabNav" Background="Transparent" Width="Auto" Height="Auto" BorderBrush="Transparent" BorderThickness="0" Grid.Row="2" Grid.Column="0" Padding="-1">
+        <TabControl Name="WPFTabNav" Background="Transparent" Width="Auto" Height="Auto" BorderBrush="Transparent" BorderThickness="0" Grid.Row="4" Grid.Column="0" Padding="-1">
             <TabItem Header="Install" Visibility="Collapsed" Name="WPFTab1">
                 <Grid Background="Transparent" >
                     <Grid.RowDefinitions>
@@ -19505,164 +19429,13 @@ $inputXML = @'
                         </WrapPanel>
                     </Border>
                 </Grid>
-            </TabItem>
-            <TabItem Header="Config" Visibility="Collapsed" Name="WPFTab3">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="{DynamicResource TabContentMargin}">
-                    <StackPanel Background="Transparent">
-                        <Grid Name="featurespanel" Background="Transparent"/>
-
-                        <!-- Windows Update Profiles Section under Config -->
-                        <Border Style="{StaticResource BorderStyle}" Margin="10,20,10,10" Padding="16">
-                            <Grid Background="Transparent" MaxWidth="1250" HorizontalAlignment="Stretch">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-
-                                <StackPanel Grid.Row="0" Margin="10,4,10,14">
-                                    <TextBlock Text="Windows Update Profiles"
-                                               FontSize="20"
-                                               FontWeight="Bold"
-                                               Foreground="{DynamicResource MainForegroundColor}"/>
-                                    <TextBlock Text="Choose how Windows receives updates. Each profile replaces the Windows Update settings managed by WinUtil."
-                                               Margin="0,4,0,0"
-                                               FontSize="12"
-                                               TextWrapping="Wrap"
-                                               Foreground="{DynamicResource MainForegroundColor}"/>
-                                </StackPanel>
-
-                                <UniformGrid Grid.Row="1" Columns="3">
-                                    <Border Style="{StaticResource BorderStyle}"
-                                            BorderBrush="{DynamicResource ProgressBarForegroundColor}"
-                                            BorderThickness="2"
-                                            Padding="14"
-                                            Margin="5"
-                                            MinHeight="280">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="*"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-                                            <StackPanel Grid.Row="0" Margin="0,0,0,10">
-                                                <TextBlock Text="Recommended"
-                                                           FontSize="18"
-                                                           FontWeight="Bold"
-                                                           Foreground="{DynamicResource MainForegroundColor}"/>
-                                                <TextBlock Text="Balanced security and stability"
-                                                           Margin="0,4,0,0"
-                                                           FontSize="12"
-                                                           Foreground="{DynamicResource MainForegroundColor}"/>
-                                            </StackPanel>
-                                            <StackPanel Grid.Row="1">
-                                                <TextBlock Text="- Defers feature updates for 365 days" TextWrapping="Wrap" Margin="0,0,0,5" Foreground="{DynamicResource MainForegroundColor}"/>
-                                                <TextBlock Text="- Defers quality updates for 4 days" TextWrapping="Wrap" Margin="0,0,0,5" Foreground="{DynamicResource MainForegroundColor}"/>
-                                                <TextBlock Text="- Excludes drivers from quality updates" TextWrapping="Wrap" Margin="0,0,0,5" Foreground="{DynamicResource MainForegroundColor}"/>
-                                                <TextBlock Text="- Notifies when downloaded updates are ready" TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource MainForegroundColor}"/>
-                                                <TextBlock Text="Available on Windows Pro, Enterprise, and Education."
-                                                           FontSize="11"
-                                                           FontStyle="Italic"
-                                                           TextWrapping="Wrap"
-                                                           Foreground="{DynamicResource MainForegroundColor}"/>
-                                            </StackPanel>
-                                            <Button Name="WPFUpdatessecurity"
-                                                    Grid.Row="2"
-                                                    Content="Apply Recommended"
-                                                    FontSize="{DynamicResource ConfigTabButtonFontSize}"
-                                                    Margin="0,12,0,0"
-                                                    Padding="8"/>
-                                        </Grid>
-                                    </Border>
-
-                                    <Border Style="{StaticResource BorderStyle}" Padding="14" Margin="5" MinHeight="280">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="*"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-                                            <StackPanel Grid.Row="0" Margin="0,0,0,10">
-                                                <TextBlock Text="Windows Default"
-                                                           FontSize="18"
-                                                           FontWeight="Bold"
-                                                           Foreground="{DynamicResource MainForegroundColor}"/>
-                                                <TextBlock Text="Return control to Windows"
-                                                           Margin="0,4,0,0"
-                                                           FontSize="12"
-                                                           Foreground="{DynamicResource MainForegroundColor}"/>
-                                            </StackPanel>
-                                            <StackPanel Grid.Row="1">
-                                                <TextBlock Text="- Removes Windows Update policies applied by WinUtil" TextWrapping="Wrap" Margin="0,0,0,5" Foreground="{DynamicResource MainForegroundColor}"/>
-                                                <TextBlock Text="- Restores update service startup settings" TextWrapping="Wrap" Margin="0,0,0,5" Foreground="{DynamicResource MainForegroundColor}"/>
-                                                <TextBlock Text="- Re-enables update scheduled tasks" TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource MainForegroundColor}"/>
-                                                <TextBlock Text="Use this to undo Recommended or Disable profile."
-                                                           FontSize="11"
-                                                           FontStyle="Italic"
-                                                           TextWrapping="Wrap"
-                                                           Foreground="{DynamicResource MainForegroundColor}"/>
-                                            </StackPanel>
-                                            <Button Name="WPFUpdatesdefault"
-                                                    Grid.Row="2"
-                                                    Content="Restore Defaults"
-                                                    FontSize="{DynamicResource ConfigTabButtonFontSize}"
-                                                    Margin="0,12,0,0"
-                                                    Padding="8"/>
-                                        </Grid>
-                                    </Border>
-
-                                    <Border Style="{StaticResource BorderStyle}" Padding="14" Margin="5" MinHeight="280">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="*"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-                                            <StackPanel Grid.Row="0" Margin="0,0,0,10">
-                                                <TextBlock Text="Disable Updates"
-                                                           FontSize="18"
-                                                           FontWeight="Bold"
-                                                           Foreground="Red"/>
-                                                <TextBlock Text="Advanced use only"
-                                                           Margin="0,4,0,0"
-                                                           FontSize="12"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="Red"/>
-                                            </StackPanel>
-                                            <StackPanel Grid.Row="1">
-                                                <TextBlock Text="- Disables automatic update policy" TextWrapping="Wrap" Margin="0,0,0,5" Foreground="{DynamicResource MainForegroundColor}"/>
-                                                <TextBlock Text="- Stops update services and scheduled tasks" TextWrapping="Wrap" Margin="0,0,0,5" Foreground="{DynamicResource MainForegroundColor}"/>
-                                                <TextBlock Text="- Clears downloaded update files" TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource MainForegroundColor}"/>
-                                                <TextBlock Text="Security updates will not be installed while active."
-                                                           FontSize="11"
-                                                           FontStyle="Italic"
-                                                           TextWrapping="Wrap"
-                                                           Foreground="Red"/>
-                                            </StackPanel>
-                                            <Button Name="WPFUpdatesdisable"
-                                                    Grid.Row="2"
-                                                    Content="Disable Updates"
-                                                    FontSize="{DynamicResource ConfigTabButtonFontSize}"
-                                                    Foreground="Red"
-                                                    Margin="0,12,0,0"
-                                                    Padding="8"/>
-                                        </Grid>
-                                    </Border>
-                                </UniformGrid>
-
-                                <Border Grid.Row="2" Style="{StaticResource BorderStyle}" Margin="5,12,5,4" Padding="10">
-                                    <TextBlock Text="Changes apply system-wide. Restart Windows after switching profiles. Use Restore Defaults to undo WinUtil update policies."
-                                               TextWrapping="Wrap"
-                                               HorizontalAlignment="Center"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource MainForegroundColor}"/>
-                                </Border>
-                            </Grid>
-                        </Border>
-                    </StackPanel>
+            </TabItem>            <TabItem Header="Config" Visibility="Collapsed" Name="WPFTab3">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="{DynamicResource TabContentMargin}">
+                    <Grid Name="featurespanel" Grid.Row="1" Background="Transparent">
+                    </Grid>
                 </ScrollViewer>
             </TabItem>
-            <TabItem Header="Activation" Visibility="Collapsed" Name="WPFTab4">
+            <TabItem Header="Updates" Visibility="Collapsed" Name="WPFTab4">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="{DynamicResource TabContentMargin}">
                     <Grid Background="Transparent" MaxWidth="1250" HorizontalAlignment="Center">
                         <Grid.RowDefinitions>
@@ -19671,190 +19444,139 @@ $inputXML = @'
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Header (Compact) -->
-                        <StackPanel Grid.Row="0" Margin="8,4,8,8">
-                            <TextBlock Text="Activation &amp; Enhancement Utilities"
-                                       FontSize="16"
+                        <StackPanel Grid.Row="0" Margin="10,10,10,14">
+                            <TextBlock Text="Windows Update Profiles"
+                                       FontSize="24"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource MainForegroundColor}"/>
-                            <TextBlock Text="Standard user (non-admin) utilities. Use 1-click Copy or Open Terminal to run safely."
-                                       FontSize="11"
-                                       Margin="0,2,0,0"
-                                       Foreground="{DynamicResource MainForegroundColor}"
-                                       Opacity="0.8"/>
+                            <TextBlock Text="Choose how Windows receives updates. Each profile replaces the Windows Update settings managed by WinUtil."
+                                       Margin="0,6,0,0"
+                                       FontSize="13"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource MainForegroundColor}"/>
                         </StackPanel>
 
-                        <!-- Cards Grid (Compact) -->
-                        <UniformGrid Grid.Row="1" Columns="2">
-                            <!-- Windows Activation Status Card -->
+                        <UniformGrid Grid.Row="1" Columns="3">
                             <Border Style="{StaticResource BorderStyle}"
-                                    BorderBrush="#0078D4"
-                                    BorderThickness="1.5"
-                                    CornerRadius="6"
-                                    Padding="12,10"
-                                    Margin="6,4">
+                                    BorderBrush="{DynamicResource ProgressBarForegroundColor}"
+                                    BorderThickness="2"
+                                    Padding="16"
+                                    MinHeight="300">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-
-                                    <!-- Title & Subtitle -->
-                                    <StackPanel Grid.Row="0" Margin="0,0,0,6">
-                                        <TextBlock Text="Windows Activation Status"
-                                                   FontSize="14"
+                                    <StackPanel Grid.Row="0" Margin="0,0,0,14">
+                                        <TextBlock Text="Recommended"
+                                                   FontSize="20"
                                                    FontWeight="Bold"
-                                                   Foreground="#0078D4"/>
-                                        <TextBlock Text="slmgr.vbs /xpr - Query Windows digital license &amp; expiry"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource LinkForegroundColor}"
-                                                   Margin="0,1,0,0"/>
-                                    </StackPanel>
-
-                                    <!-- Description -->
-                                    <TextBlock Grid.Row="1"
-                                               Text="Check if your Windows installation is permanently activated via digital license, OEM, or retail entitlement."
-                                               TextWrapping="Wrap"
-                                               FontSize="11"
-                                               Margin="0,0,0,8"
-                                               Foreground="{DynamicResource MainForegroundColor}"/>
-
-                                    <!-- Status Info Box -->
-                                    <Border Grid.Row="2"
-                                            Background="{DynamicResource MainBackgroundColor}"
-                                            BorderBrush="{DynamicResource BorderBrushColor}"
-                                            BorderThickness="1"
-                                            CornerRadius="3"
-                                            Padding="6,6"
-                                            Margin="0,0,0,10">
-                                        <TextBlock Text="Native Windows Licensing Service (Software Licensing Management Tool)"
-                                                   FontSize="10.5"
-                                                   FontFamily="Consolas"
-                                                   VerticalAlignment="Center"
                                                    Foreground="{DynamicResource MainForegroundColor}"/>
-                                    </Border>
-
-                                    <!-- Action Buttons -->
-                                    <WrapPanel Grid.Row="3" Orientation="Horizontal">
-                                        <Button Name="WPFActivationStatus"
-                                                Content="Check Activation Status"
-                                                ToolTip="Check Windows activation expiration status"
-                                                FontSize="11"
-                                                FontWeight="SemiBold"
-                                                Background="#0078D4"
-                                                Foreground="White"
-                                                Padding="8,5"
-                                                Margin="0,0,6,4"/>
-                                        <Button Name="WPFActivationOpenShell"
-                                                Content="Open Standard Terminal"
-                                                ToolTip="Open a standard non-admin PowerShell window"
-                                                FontSize="11"
-                                                Padding="8,5"
-                                                Margin="0,0,0,4"/>
-                                    </WrapPanel>
+                                        <TextBlock Text="Security updates only"
+                                                   Margin="0,4,0,0"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource MainForegroundColor}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1">
+                                        <TextBlock Text="- Defers feature updates for 365 days" TextWrapping="Wrap" Margin="0,0,0,7" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="- Defers quality updates for 4 days" TextWrapping="Wrap" Margin="0,0,0,7" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="- Excludes drivers from quality updates" TextWrapping="Wrap" Margin="0,0,0,7" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="- Notifies when downloaded updates are ready to install" TextWrapping="Wrap" Margin="0,0,0,12" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="Available on Windows Pro, Enterprise, and Education editions."
+                                                   FontSize="11"
+                                                   FontStyle="Italic"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource MainForegroundColor}"/>
+                                    </StackPanel>
+                                    <Button Name="WPFUpdatessecurity"
+                                            Grid.Row="2"
+                                            Content="Apply Recommended"
+                                            FontSize="{DynamicResource ConfigTabButtonFontSize}"
+                                            Margin="0,16,0,0"
+                                            Padding="10"/>
                                 </Grid>
                             </Border>
 
-                            <!-- Spicetify Spotify Mod Card -->
-                            <Border Style="{StaticResource BorderStyle}"
-                                    BorderBrush="#1DB954"
-                                    BorderThickness="1.5"
-                                    CornerRadius="6"
-                                    Padding="12,10"
-                                    Margin="6,4">
+                            <Border Style="{StaticResource BorderStyle}" Padding="16" MinHeight="300">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-
-                                    <!-- Title & Subtitle -->
-                                    <StackPanel Grid.Row="0" Margin="0,0,0,6">
-                                        <TextBlock Text="Spicetify CLI &amp; Marketplace"
-                                                   FontSize="14"
+                                    <StackPanel Grid.Row="0" Margin="0,0,0,14">
+                                        <TextBlock Text="Windows Default"
+                                                   FontSize="20"
                                                    FontWeight="Bold"
-                                                   Foreground="#1DB954"/>
-                                        <TextBlock Text="spicetify.app - Spotify Desktop themes, extensions &amp; ad-free"
-                                                   FontSize="11"
-                                                   Foreground="#1DB954"
-                                                   Margin="0,1,0,0"/>
+                                                   Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="Return control to Windows"
+                                                   Margin="0,4,0,0"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource MainForegroundColor}"/>
                                     </StackPanel>
+                                    <StackPanel Grid.Row="1">
+                                        <TextBlock Text="- Removes Windows Update policies applied by WinUtil" TextWrapping="Wrap" Margin="0,0,0,7" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="- Restores update service startup settings" TextWrapping="Wrap" Margin="0,0,0,7" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="- Re-enables update scheduled tasks" TextWrapping="Wrap" Margin="0,0,0,12" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="Use this to undo the Recommended or Disable profile."
+                                                   FontSize="11"
+                                                   FontStyle="Italic"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource MainForegroundColor}"/>
+                                    </StackPanel>
+                                    <Button Name="WPFUpdatesdefault"
+                                            Grid.Row="2"
+                                            Content="Restore Defaults"
+                                            FontSize="{DynamicResource ConfigTabButtonFontSize}"
+                                            Margin="0,16,0,0"
+                                            Padding="10"/>
+                                </Grid>
+                            </Border>
 
-                                    <!-- Description -->
-                                    <TextBlock Grid.Row="1"
-                                               Text="CLI tool to mod Spotify. Must run in a non-admin shell to install into your user profile."
-                                               TextWrapping="Wrap"
-                                               FontSize="11"
-                                               Margin="0,0,0,8"
-                                               Foreground="{DynamicResource MainForegroundColor}"/>
-
-                                    <!-- Command Box with Copy Button -->
-                                    <Grid Grid.Row="2" Margin="0,0,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0"
-                                                Background="{DynamicResource MainBackgroundColor}"
-                                                BorderBrush="{DynamicResource BorderBrushColor}"
-                                                BorderThickness="1"
-                                                CornerRadius="3"
-                                                Padding="6,4"
-                                                Margin="0,0,4,0">
-                                            <TextBlock Text="iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex"
-                                                       FontSize="10"
-                                                       FontFamily="Consolas"
-                                                       TextWrapping="Wrap"
-                                                       VerticalAlignment="Center"
-                                                       Foreground="{DynamicResource MainForegroundColor}"/>
-                                        </Border>
-                                        <Button Grid.Column="1"
-                                                Name="WPFSpicetifyCopy"
-                                                Content="Copy"
-                                                ToolTip="Copy install command to clipboard"
-                                                Padding="10,4"
-                                                FontSize="11"/>
-                                    </Grid>
-
-                                    <!-- Action Buttons -->
-                                    <WrapPanel Grid.Row="3" Orientation="Horizontal">
-                                        <Button Name="WPFSpicetifyOpenShell"
-                                                Content="Open Standard Terminal"
-                                                ToolTip="Open a standard non-admin PowerShell window"
-                                                FontSize="11"
-                                                Padding="8,5"
-                                                Margin="0,0,6,4"/>
-                                        <Button Name="WPFSpicetifyInstall"
-                                                Content="Install CLI"
-                                                ToolTip="Install Spicetify CLI in standard user shell"
-                                                FontSize="11"
-                                                FontWeight="SemiBold"
-                                                Background="#1DB954"
-                                                Foreground="Black"
-                                                Padding="8,5"
-                                                Margin="0,0,6,4"/>
-                                        <Button Name="WPFSpicetifyMarketplace"
-                                                Content="Install Marketplace"
-                                                ToolTip="Install Spicetify Marketplace in standard user shell"
-                                                FontSize="11"
-                                                Padding="8,5"
-                                                Margin="0,0,0,4"/>
-                                    </WrapPanel>
+                            <Border Style="{StaticResource BorderStyle}" Padding="16" MinHeight="300">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <StackPanel Grid.Row="0" Margin="0,0,0,14">
+                                        <TextBlock Text="Disable Updates"
+                                                   FontSize="20"
+                                                   FontWeight="Bold"
+                                                   Foreground="Red"/>
+                                        <TextBlock Text="Advanced use only"
+                                                   Margin="0,4,0,0"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="Red"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1">
+                                        <TextBlock Text="- Disables automatic update policy" TextWrapping="Wrap" Margin="0,0,0,7" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="- Stops update services and scheduled tasks" TextWrapping="Wrap" Margin="0,0,0,7" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="- Clears downloaded update files" TextWrapping="Wrap" Margin="0,0,0,12" Foreground="{DynamicResource MainForegroundColor}"/>
+                                        <TextBlock Text="Security updates will not be installed while this profile is active."
+                                                   FontSize="11"
+                                                   FontStyle="Italic"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="Red"/>
+                                    </StackPanel>
+                                    <Button Name="WPFUpdatesdisable"
+                                            Grid.Row="2"
+                                            Content="Disable Updates"
+                                            FontSize="{DynamicResource ConfigTabButtonFontSize}"
+                                            Foreground="Red"
+                                            Margin="0,16,0,0"
+                                            Padding="10"/>
                                 </Grid>
                             </Border>
                         </UniformGrid>
 
-                        <!-- Footer Info (Compact) -->
-                        <Border Grid.Row="2" Style="{StaticResource BorderStyle}" Margin="6,8,6,4" Padding="8,6">
-                            <TextBlock Text="Standard User Isolation: Both tools run strictly in standard (non-admin) user context. To avoid antivirus false positives, use 'Copy' and paste into your own standard terminal."
+                        <Border Grid.Row="2" Style="{StaticResource BorderStyle}" Margin="8,14,8,8" Padding="12">
+                            <TextBlock Text="Changes apply system-wide. Restart Windows after switching profiles. Use Restore Defaults to undo WinUtil update policies."
                                        TextWrapping="Wrap"
                                        HorizontalAlignment="Center"
-                                       FontSize="11"
-                                       Opacity="0.85"
                                        Foreground="{DynamicResource MainForegroundColor}"/>
                         </Border>
                     </Grid>
@@ -20505,7 +20227,7 @@ $inputXML = @'
         </TabControl>
 
         <!-- Window-level progress indicator - visible regardless of active tab -->
-        <Border Name="WPFTweaksProgressBar" Grid.Row="3" Background="{DynamicResource MainBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" VerticalAlignment="Bottom" Visibility="Collapsed" Padding="12,6">
+        <Border Name="WPFTweaksProgressBar" Grid.Row="5" Background="{DynamicResource MainBackgroundColor}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0" VerticalAlignment="Bottom" Visibility="Collapsed" Padding="12,6">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

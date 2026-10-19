@@ -199,9 +199,6 @@ Describe "XAML document" {
             "WPFUpdatesdefault",
             "WPFUpdatessecurity",
             "WPFUpdatesdisable",
-            "WPFActivationStatus",
-            "WPFSpicetifyInstall",
-            "WPFSpicetifyMarketplace",
             "WPFDefaultAppxSelection",
             "WPFGetInstalledAppx",
             "WPFSelectAllAppx",
@@ -219,9 +216,9 @@ Describe "XAML document" {
 
 
 
-    It "presents the three Updates profiles with accurate action labels under Config" {
-        $configTab = $script:xaml.SelectSingleNode('//*[local-name()="TabItem"][@Name="WPFTab3"]')
-        $profileGrid = $configTab.SelectSingleNode('.//*[local-name()="UniformGrid"]')
+    It "presents the three Updates profiles with accurate action labels" {
+        $updatesTab = $script:xaml.SelectSingleNode('//*[local-name()="TabItem"][@Name="WPFTab4"]')
+        $profileGrid = $updatesTab.SelectSingleNode('.//*[local-name()="UniformGrid"]')
         $expectedButtons = @{
             WPFUpdatessecurity = "Apply Recommended"
             WPFUpdatesdefault = "Restore Defaults"
@@ -230,7 +227,7 @@ Describe "XAML document" {
 
         $profileGrid.GetAttribute("Columns") | Should -Be "3"
         foreach ($buttonName in $expectedButtons.Keys) {
-            $button = $configTab.SelectSingleNode(".//*[local-name()='Button'][@Name='$buttonName']")
+            $button = $updatesTab.SelectSingleNode(".//*[local-name()='Button'][@Name='$buttonName']")
             $button.GetAttribute("Content") | Should -Be $expectedButtons[$buttonName]
         }
     }
@@ -284,7 +281,7 @@ Describe "XAML document" {
             "WPFTab1:Install",
             "WPFTab2:Tweaks",
             "WPFTab3:Config",
-            "WPFTab4:Activation",
+            "WPFTab4:Updates",
             "WPFTab5:Win11ISO",
             "WPFTab6:AppX"
         )
