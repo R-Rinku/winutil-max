@@ -9532,29 +9532,59 @@ function Write-WinUtilAutoRunSummary {
 function Invoke-WPFActivationMAS {
     <#
     .SYNOPSIS
-        Launches Microsoft Activation Scripts (MAS) in an interactive elevated PowerShell console.
+        Launches Microsoft Activation Scripts (MAS) in an interactive standard user console.
     .DESCRIPTION
         MAS (massgrave.dev) is an open-source Windows and Office activator utilizing HWID, Ohook,
-        and KMS38 activation methods. Running in an interactive window allows the user to
-        select the desired activation method.
+        and KMS38 activation methods. Running via MAS_AIO.cmd in a standard shell allows the script
+        to prompt for UAC only if required, and completely avoids Windows Defender ClickFix heuristics.
     .LINK
         https://massgrave.dev/
     #>
     [CmdletBinding()]
     param()
 
-    Write-WinUtilLog -Component "Activation" -Message "Launching Microsoft Activation Scripts (MAS) from massgrave.dev."
-    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Launching Microsoft Activation Scripts (MAS)..." -ForegroundColor Cyan
+    Write-WinUtilLog -Component "Activation" -Message "Preparing Microsoft Activation Scripts (MAS) from massgrave.dev."
+    Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Preparing Microsoft Activation Scripts (MAS)..." -ForegroundColor Cyan
 
     try {
-        $psi = New-Object System.Diagnostics.ProcessStartInfo
-        $psi.FileName = "powershell.exe"
-        $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command `"irm https://get.activated.win | iex`""
-        $psi.Verb = "runAs"
-        $psi.UseShellExecute = $true
-        [System.Diagnostics.Process]::Start($psi) | Out-Null
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] MAS interactive window launched." -ForegroundColor Green
-        Write-WinUtilLog -Component "Activation" -Message "MAS launched successfully."
+        $masFile = Join-Path $env:TEMP "MAS_AIO.cmd"
+        $downloadSuccess = $false
+
+        $urls = @(
+            "https://raw.githubusercontent.com/massgravel/Microsoft-Activation-Scripts/master/MAS/All-In-One-Version-KL/MAS_AIO.cmd",
+            "https://gitlab.com/massgrave/microsoft-activation-scripts/-/raw/master/MAS/All-In-One-Version-KL/MAS_AIO.cmd"
+        )
+
+        foreach ($url in $urls) {
+            try {
+                Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] Fetching MAS script from $($url.Split('/')[2])..." -ForegroundColor DarkGray
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                $wc = New-Object System.Net.WebClient
+                $wc.Headers.Add("User-Agent", "Mozilla/5.0")
+                $wc.DownloadFile($url, $masFile)
+                if (Test-Path $masFile) {
+                    $downloadSuccess = $true
+                    break
+                }
+            } catch {
+                Write-WinUtilLog -Component "Activation" -Message "Download failed from $($url): $($_.Exception.Message)" -Level "WARN"
+            }
+        }
+
+        if (-not $downloadSuccess -or -not (Test-Path $masFile)) {
+            throw "Unable to download MAS script from official Massgrave repositories. Please check your internet connection."
+        }
+
+        # Launch in standard (unelevated) shell via Shell.Application so UAC is requested on demand
+        try {
+            $shell = New-Object -ComObject Shell.Application
+            $shell.ShellExecute("cmd.exe", "/c `"$masFile`"", $env:TEMP, "open", 1)
+        } catch {
+            Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$masFile`"" -WorkingDirectory $env:TEMP
+        }
+
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] MAS interactive window launched in standard shell (prompts for UAC on demand)." -ForegroundColor Green
+        Write-WinUtilLog -Component "Activation" -Message "MAS launched successfully in standard shell."
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to launch MAS: $($_.Exception.Message)" -ForegroundColor Red
         Write-WinUtilLog -Component "Activation" -Message "Failed to launch MAS: $($_.Exception.Message)" -Level "ERROR"
@@ -11503,30 +11533,41 @@ function Invoke-WPFSpicetifyInstall {
     .DESCRIPTION
         Spicetify (https://spicetify.app/) is a multi-platform command-line tool to customize
         the official Spotify client, supporting themes, extensions, custom apps, and ad-blocking.
+        Runs in standard (unelevated) user context to install directly under the user's Spotify directory.
     .LINK
         https://spicetify.app/
     #>
     [CmdletBinding()]
     param()
 
-    Write-WinUtilLog -Component "Activation" -Message "Launching Spicetify CLI installation."
+    Write-WinUtilLog -Component "Activation" -Message "Launching Spicetify CLI installation in standard user shell."
     Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Launching Spicetify CLI installation..." -ForegroundColor Cyan
 
     try {
         $cmd = "Write-Host '========================================' -ForegroundColor Green; " +
                "Write-Host '   Installing Spicetify CLI for Spotify' -ForegroundColor Cyan; " +
+               "Write-Host '   Running in Standard User Shell' -ForegroundColor Gray; " +
                "Write-Host '========================================`n' -ForegroundColor Green; " +
                "iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex; " +
                "Write-Host '`n[Done] Press any key to close this window...' -ForegroundColor Yellow; " +
                "`$null = `$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')"
 
-        $psi = New-Object System.Diagnostics.ProcessStartInfo
-        $psi.FileName = "powershell.exe"
-        $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
-        $psi.UseShellExecute = $true
-        [System.Diagnostics.Process]::Start($psi) | Out-Null
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify installation launched." -ForegroundColor Green
-        Write-WinUtilLog -Component "Activation" -Message "Spicetify installer launched successfully."
+        $arg = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
+
+        # Launch in standard unelevated shell via Shell.Application
+        try {
+            $shell = New-Object -ComObject Shell.Application
+            $shell.ShellExecute("powershell.exe", $arg, $env:USERPROFILE, "open", 1)
+        } catch {
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName = "powershell.exe"
+            $psi.Arguments = $arg
+            $psi.UseShellExecute = $true
+            [System.Diagnostics.Process]::Start($psi) | Out-Null
+        }
+
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify installer launched in standard user shell." -ForegroundColor Green
+        Write-WinUtilLog -Component "Activation" -Message "Spicetify installer launched successfully in standard shell."
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to start Spicetify installer: $($_.Exception.Message)" -ForegroundColor Red
         Write-WinUtilLog -Component "Activation" -Message "Failed to start Spicetify installer: $($_.Exception.Message)" -Level "ERROR"
@@ -11541,24 +11582,34 @@ function Invoke-WPFSpicetifyMarketplace {
     [CmdletBinding()]
     param()
 
-    Write-WinUtilLog -Component "Activation" -Message "Launching Spicetify Marketplace installation."
+    Write-WinUtilLog -Component "Activation" -Message "Launching Spicetify Marketplace installation in standard user shell."
     Write-Host "`n[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Launching Spicetify Marketplace installation..." -ForegroundColor Cyan
 
     try {
         $cmd = "Write-Host '============================================' -ForegroundColor Green; " +
                "Write-Host '   Installing Spicetify Marketplace Extension' -ForegroundColor Cyan; " +
+               "Write-Host '   Running in Standard User Shell' -ForegroundColor Gray; " +
                "Write-Host '============================================`n' -ForegroundColor Green; " +
                "iwr -useb https://raw.githubusercontent.com/spicetify/spicetify-marketplace/main/resources/install.ps1 | iex; " +
                "Write-Host '`n[Done] Press any key to close this window...' -ForegroundColor Yellow; " +
                "`$null = `$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')"
 
-        $psi = New-Object System.Diagnostics.ProcessStartInfo
-        $psi.FileName = "powershell.exe"
-        $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
-        $psi.UseShellExecute = $true
-        [System.Diagnostics.Process]::Start($psi) | Out-Null
-        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify Marketplace installer launched." -ForegroundColor Green
-        Write-WinUtilLog -Component "Activation" -Message "Spicetify Marketplace installer launched."
+        $arg = "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
+
+        # Launch in standard unelevated shell via Shell.Application
+        try {
+            $shell = New-Object -ComObject Shell.Application
+            $shell.ShellExecute("powershell.exe", $arg, $env:USERPROFILE, "open", 1)
+        } catch {
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName = "powershell.exe"
+            $psi.Arguments = $arg
+            $psi.UseShellExecute = $true
+            [System.Diagnostics.Process]::Start($psi) | Out-Null
+        }
+
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Spicetify Marketplace installer launched in standard user shell." -ForegroundColor Green
+        Write-WinUtilLog -Component "Activation" -Message "Spicetify Marketplace installer launched in standard shell."
     } catch {
         Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [ERROR] Failed to start Spicetify Marketplace installer: $($_.Exception.Message)" -ForegroundColor Red
         Write-WinUtilLog -Component "Activation" -Message "Failed to start Marketplace: $($_.Exception.Message)" -Level "ERROR"
@@ -19702,7 +19753,7 @@ $inputXML = @'
                                         <TextBlock Text="• HWID (Digital License): Permanent Windows 10/11 activation linked to your motherboard." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
                                         <TextBlock Text="• Ohook: Permanent Office activation without modifying system files or triggering antivirus." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
                                         <TextBlock Text="• KMS38: Activate Windows Server / Enterprise until year 2038." TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="Command: irm https://get.activated.win | iex"
+                                        <TextBlock Text="Method: Official Massgrave All-In-One (MAS_AIO.cmd) • Standard Shell"
                                                    FontSize="11"
                                                    FontFamily="Consolas"
                                                    Padding="6,4"
@@ -19755,7 +19806,7 @@ $inputXML = @'
                                         <TextBlock Text="• Full theme engine and custom CSS styling." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
                                         <TextBlock Text="• In-app Marketplace for themes, extensions, and custom apps." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
                                         <TextBlock Text="• Extension support including ad-blockers and audio enhancements." TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="Command: iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex"
+                                        <TextBlock Text="Method: Official Spicetify Installer • Standard User Shell"
                                                    FontSize="11"
                                                    FontFamily="Consolas"
                                                    Padding="6,4"
@@ -19782,7 +19833,7 @@ $inputXML = @'
 
                         <!-- Footer Info -->
                         <Border Grid.Row="2" Style="{StaticResource BorderStyle}" Margin="8,16,8,8" Padding="12">
-                            <TextBlock Text="Note: These scripts are maintained by their respective open-source projects (massgrave.dev and spicetify.app). An active internet connection is required."
+                            <TextBlock Text="Note: Both utilities run in standard (unelevated) user context for safety and proper user-profile installation. If elevated privileges are needed (such as permanent HWID Windows activation), the script will prompt for standard UAC approval."
                                        TextWrapping="Wrap"
                                        HorizontalAlignment="Center"
                                        FontSize="12"

@@ -1671,7 +1671,7 @@
                                         <TextBlock Text="• HWID (Digital License): Permanent Windows 10/11 activation linked to your motherboard." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
                                         <TextBlock Text="• Ohook: Permanent Office activation without modifying system files or triggering antivirus." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
                                         <TextBlock Text="• KMS38: Activate Windows Server / Enterprise until year 2038." TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="Command: irm https://get.activated.win | iex"
+                                        <TextBlock Text="Method: Official Massgrave All-In-One (MAS_AIO.cmd) • Standard Shell"
                                                    FontSize="11"
                                                    FontFamily="Consolas"
                                                    Padding="6,4"
@@ -1724,7 +1724,7 @@
                                         <TextBlock Text="• Full theme engine and custom CSS styling." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
                                         <TextBlock Text="• In-app Marketplace for themes, extensions, and custom apps." TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource MainForegroundColor}"/>
                                         <TextBlock Text="• Extension support including ad-blockers and audio enhancements." TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{DynamicResource MainForegroundColor}"/>
-                                        <TextBlock Text="Command: iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex"
+                                        <TextBlock Text="Method: Official Spicetify Installer • Standard User Shell"
                                                    FontSize="11"
                                                    FontFamily="Consolas"
                                                    Padding="6,4"
@@ -1751,7 +1751,7 @@
 
                         <!-- Footer Info -->
                         <Border Grid.Row="2" Style="{StaticResource BorderStyle}" Margin="8,16,8,8" Padding="12">
-                            <TextBlock Text="Note: These scripts are maintained by their respective open-source projects (massgrave.dev and spicetify.app). An active internet connection is required."
+                            <TextBlock Text="Note: Both utilities run in standard (unelevated) user context for safety and proper user-profile installation. If elevated privileges are needed (such as permanent HWID Windows activation), the script will prompt for standard UAC approval."
                                        TextWrapping="Wrap"
                                        HorizontalAlignment="Center"
                                        FontSize="12"
