@@ -45,10 +45,29 @@ Windows Registry Editor Version 5.00
 @="cmd.exe /c takeown /f \"%1\" /r /d y && icacls \"%1\" /grant *S-1-3-4:F /t /c"
 "@
 
-    $tempReg = Join-Path ([System.IO.Path]::GetTempPath()) "winutil_take_ownership_add_$([guid]::NewGuid().ToString('N')).reg"
+    $candidates = @()
+    if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+        $candidates += Join-Path $PSScriptRoot "..\..\scripts\take-ownership\Add_Take_Ownership_to_context_menu.reg"
+        $candidates += Join-Path $PSScriptRoot "scripts\take-ownership\Add_Take_Ownership_to_context_menu.reg"
+    }
+    $currPath = (Get-Location).Path
+    if (-not [string]::IsNullOrWhiteSpace($currPath)) {
+        $candidates += Join-Path $currPath "scripts\take-ownership\Add_Take_Ownership_to_context_menu.reg"
+    }
+
+    $localReg = $candidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and (Test-Path $_) } | Select-Object -First 1
+
+    $isTemp = $false
+    if ($localReg) {
+        $regFileToImport = $localReg
+    } else {
+        $regFileToImport = Join-Path ([System.IO.Path]::GetTempPath()) "winutil_max_take_ownership_add_$([guid]::NewGuid().ToString('N')).reg"
+        [System.IO.File]::WriteAllText($regFileToImport, $regContent, [System.Text.Encoding]::Unicode)
+        $isTemp = $true
+    }
+
     try {
-        [System.IO.File]::WriteAllText($tempReg, $regContent, [System.Text.Encoding]::Unicode)
-        $process = Start-Process -FilePath "reg.exe" -ArgumentList "import `"$tempReg`"" -Wait -PassThru -NoNewWindow
+        $process = Start-Process -FilePath "reg.exe" -ArgumentList "import `"$regFileToImport`"" -Wait -PassThru -NoNewWindow
         if ($process.ExitCode -eq 0) {
             Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] 'Take Full Ownership' added to right-click context menu." -ForegroundColor Green
             Write-WinUtilLog -Component "TakeOwnership" -Message "Take Full Ownership added to context menu successfully."
@@ -56,8 +75,8 @@ Windows Registry Editor Version 5.00
             throw "reg.exe import failed with exit code $($process.ExitCode)."
         }
     } finally {
-        if (Test-Path $tempReg) {
-            Remove-Item -Path $tempReg -Force -ErrorAction SilentlyContinue
+        if ($isTemp -and (Test-Path $regFileToImport)) {
+            Remove-Item -Path $regFileToImport -Force -ErrorAction SilentlyContinue
         }
     }
 }
@@ -81,10 +100,29 @@ Windows Registry Editor Version 5.00
 [-HKEY_CLASSES_ROOT\Drive\shell\runas]
 "@
 
-    $tempReg = Join-Path ([System.IO.Path]::GetTempPath()) "winutil_take_ownership_rem_$([guid]::NewGuid().ToString('N')).reg"
+    $candidates = @()
+    if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+        $candidates += Join-Path $PSScriptRoot "..\..\scripts\take-ownership\Remove_Take_Ownership_from_context_menu.reg"
+        $candidates += Join-Path $PSScriptRoot "scripts\take-ownership\Remove_Take_Ownership_from_context_menu.reg"
+    }
+    $currPath = (Get-Location).Path
+    if (-not [string]::IsNullOrWhiteSpace($currPath)) {
+        $candidates += Join-Path $currPath "scripts\take-ownership\Remove_Take_Ownership_from_context_menu.reg"
+    }
+
+    $localReg = $candidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and (Test-Path $_) } | Select-Object -First 1
+
+    $isTemp = $false
+    if ($localReg) {
+        $regFileToImport = $localReg
+    } else {
+        $regFileToImport = Join-Path ([System.IO.Path]::GetTempPath()) "winutil_max_take_ownership_rem_$([guid]::NewGuid().ToString('N')).reg"
+        [System.IO.File]::WriteAllText($regFileToImport, $regContent, [System.Text.Encoding]::Unicode)
+        $isTemp = $true
+    }
+
     try {
-        [System.IO.File]::WriteAllText($tempReg, $regContent, [System.Text.Encoding]::Unicode)
-        $process = Start-Process -FilePath "reg.exe" -ArgumentList "import `"$tempReg`"" -Wait -PassThru -NoNewWindow
+        $process = Start-Process -FilePath "reg.exe" -ArgumentList "import `"$regFileToImport`"" -Wait -PassThru -NoNewWindow
         if ($process.ExitCode -eq 0) {
             Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] 'Take Full Ownership' removed from right-click context menu." -ForegroundColor Green
             Write-WinUtilLog -Component "TakeOwnership" -Message "Take Full Ownership removed from context menu successfully."
@@ -92,8 +130,8 @@ Windows Registry Editor Version 5.00
             throw "reg.exe import failed with exit code $($process.ExitCode)."
         }
     } finally {
-        if (Test-Path $tempReg) {
-            Remove-Item -Path $tempReg -Force -ErrorAction SilentlyContinue
+        if ($isTemp -and (Test-Path $regFileToImport)) {
+            Remove-Item -Path $regFileToImport -Force -ErrorAction SilentlyContinue
         }
     }
 }

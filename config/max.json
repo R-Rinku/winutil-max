@@ -1,0 +1,72 @@
+{
+  "WPFMaxSmartBulkRename": {
+    "Content": "Smart Bulk Name Modifier",
+    "Description": "Interactive batch file and folder renamer with real-time preview, regular expressions, and sequence numbering.",
+    "category": "Power Utilities",
+    "panel": "0",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "function": "Invoke-WPFSmartBulkRename",
+    "link": "https://github.com/R-Rinku/winutil-max"
+  },
+  "WPFMaxTakeOwnershipAdd": {
+    "Content": "Take Ownership - Add to Context Menu",
+    "Description": "Adds 'Take Full Ownership' to Windows Explorer context menu with critical OS root safeguards.",
+    "category": "Power Utilities",
+    "panel": "0",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "function": "Invoke-WPFTakeOwnershipAdd",
+    "link": "https://www.rinkurapria.dev/blog/take-full-ownership-windows.html"
+  },
+  "WPFMaxTakeOwnershipRemove": {
+    "Content": "Take Ownership - Remove from Context Menu",
+    "Description": "Removes 'Take Full Ownership' context menu entries from Windows Explorer.",
+    "category": "Power Utilities",
+    "panel": "0",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "function": "Invoke-WPFTakeOwnershipRemove",
+    "link": "https://www.rinkurapria.dev/blog/take-full-ownership-windows.html"
+  },
+  "WPFMaxSuperGodMode": {
+    "Content": "Windows Super God Mode",
+    "Description": "Launches ThioJoe's Windows Super God Mode to create shortcuts to all special shell folders, deep links, and Windows settings.",
+    "category": "Power Utilities",
+    "panel": "0",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "function": "Invoke-WinUtilSuperGodMode",
+    "link": "https://github.com/ThioJoe/Windows-Super-God-Mode"
+  },
+  "WPFMaxBitLockerPolicy": {
+    "Content": "BitLocker Startup PIN Policy - Enable",
+    "Description": "Enables Group Policy to allow BitLocker pre-boot Startup PIN on TPM-enabled machines and devices without TPM.",
+    "category": "Security",
+    "panel": "1",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "function": "Invoke-WinUtilBitLockerPolicy",
+    "link": "https://learn.microsoft.com/windows/security/operating-system-security/data-protection/bitlocker/"
+  },
+  "WPFMaxInstallClaude": {
+    "Content": "Claude Code CLI - Install / Launch",
+    "Description": "Installs or launches Anthropic's Claude Code terminal coding agent (@anthropic-ai/claude-code via npm).",
+    "category": "AI & Developer Toolkits",
+    "panel": "1",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "function": "Invoke-WinUtilInstallClaudeCLI",
+    "link": "https://docs.anthropic.com/en/docs/agents-and-tools/claude-code"
+  },
+  "WPFMaxInstallOmniRoute": {
+    "Content": "OmniRoute AI Gateway - Install / Launch",
+    "Description": "Installs or launches OmniRoute local AI model router, proxy, and failover gateway.",
+    "category": "AI & Developer Toolkits",
+    "panel": "1",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "function": "Invoke-WinUtilInstallOmniRoute",
+    "link": "https://github.com/dgl1231/omniroute"
+  }
+}

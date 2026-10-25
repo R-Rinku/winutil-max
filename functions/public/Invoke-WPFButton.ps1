@@ -34,7 +34,9 @@ function Invoke-WPFButton {
     $workButtons = @(
         "WPFInstallUpgrade", "WPFAddUltPerf", "WPFRemoveUltPerf",
         "WPFUpdatesdefault", "WPFUpdatesdisable", "WPFUpdatessecurity",
-        "WPFGetInstalledAppx"
+        "WPFGetInstalledAppx", "WPFMaxTurboClean", "WPFMaxSystemRepair",
+        "WPFMaxInstallClaude", "WPFMaxInstallOmniRoute",
+        "WPFMaxBitLockerPolicy", "WPFMaxBitLockerStatus"
     )
 
     $featureEntry = $sync.configs.feature.$Button
@@ -125,7 +127,7 @@ function Invoke-WPFButtonAction {
         [switch]$UpdatesDisableConfirmed
     )
 
-    # Check if button is defined in feature config with function or InvokeScript
+    # Check if button is defined in feature or max config with function or InvokeScript
     if ($sync.configs.feature.$Button) {
         $buttonConfig = $sync.configs.feature.$Button
 
@@ -146,6 +148,17 @@ function Invoke-WPFButtonAction {
                 }
             }
             return
+        }
+    }
+
+    if ($sync.configs.max.$Button) {
+        $buttonConfig = $sync.configs.max.$Button
+        if ($buttonConfig.function) {
+            $functionName = $buttonConfig.function
+            if (Get-Command $functionName -ErrorAction SilentlyContinue) {
+                & $functionName
+                return
+            }
         }
     }
 
@@ -243,14 +256,12 @@ function Invoke-WPFButtonAction {
             }
         }
         "WPFselectedAppsButton" {$sync.selectedAppsPopup.IsOpen = -not $sync.selectedAppsPopup.IsOpen}
-        "WPFVecnaDismissButton" {
-            if ($null -ne $sync.WPFVecnaOverlay) {
-                if ($script:WinUtilVecnaExitHandled) {
-                    $sync.Form.Close()
-                } else {
-                    $sync.WPFVecnaOverlay.Visibility = [System.Windows.Visibility]::Collapsed
-                }
-            }
-        }
+        "WPFMaxSmartBulkRename" { Invoke-WPFSmartBulkRename }
+        "WPFMaxTakeOwnershipAdd" { Invoke-WPFTakeOwnershipAdd }
+        "WPFMaxTakeOwnershipRemove" { Invoke-WPFTakeOwnershipRemove }
+        "WPFMaxSuperGodMode" { Invoke-WinUtilSuperGodMode }
+        "WPFMaxBitLockerPolicy" { Invoke-WinUtilBitLockerPolicy }
+        "WPFMaxInstallClaude" { Invoke-WinUtilInstallClaudeCLI }
+        "WPFMaxInstallOmniRoute" { Invoke-WinUtilInstallOmniRoute }
     }
 }

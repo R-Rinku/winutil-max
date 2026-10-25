@@ -21,39 +21,6 @@
     "function": "Invoke-WPFFixesNTPPool",
     "link": "https://winutil.christitus.com/code-reference/features/fixes/ntppool"
   },
-  "WPFFixesSmartBulkRename": {
-    "Content": "[MAX] Smart Bulk Name Modifier",
-    "Description": "Advanced bulk file and folder renamer with live preview, text replace, remove, prefix/suffix, numbering, case transformation, regex support, and automated permission resolution.",
-    "category": "Fixes",
-    "panel": "1",
-    "Type": "Button",
-    "ButtonWidth": "300",
-    "Highlight": true,
-    "function": "Invoke-WPFSmartBulkRename",
-    "link": "https://github.com/R-Rinku/winutil-max"
-  },
-  "WPFTakeOwnershipAdd": {
-    "Content": "[MAX] Take Ownership - Add Context Menu",
-    "Description": "Adds 'Take Ownership' with UAC shield to right-click context menu for files, folders, and non-system drives with built-in protection against modifying core Windows system directories.",
-    "category": "Fixes",
-    "panel": "1",
-    "Type": "Button",
-    "ButtonWidth": "300",
-    "Highlight": true,
-    "function": "Invoke-WPFTakeOwnershipAdd",
-    "link": "https://www.rinkurapria.dev/blog/take-full-ownership-windows.html"
-  },
-  "WPFTakeOwnershipRemove": {
-    "Content": "[MAX] Take Ownership - Remove Context Menu",
-    "Description": "Removes the 'Take Ownership' entries from right-click context menus for files, folders, and drives.",
-    "category": "Fixes",
-    "panel": "1",
-    "Type": "Button",
-    "ButtonWidth": "300",
-    "Highlight": true,
-    "function": "Invoke-WPFTakeOwnershipRemove",
-    "link": "https://www.rinkurapria.dev/blog/take-full-ownership-windows.html"
-  },
   "WPFFeatureshyperv": {
     "Content": "Hyper-V - Enable",
     "Description": "Hyper-V is a hardware virtualization product developed by Microsoft that allows users to create and manage virtual machines.",
