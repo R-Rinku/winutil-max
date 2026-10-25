@@ -201,7 +201,7 @@ Describe "Win11 Creator setup media" {
 
     It "starts each new ISO modification in a fresh working directory" {
         foreach ($expectedText in @(
-            '$workDir = Join-Path $env:TEMP "WinUtil_Win11ISO_$(Get-Date -Format ''yyyyMMdd_HHmmss'')"',
+            '$workDir = Join-Path $env:TEMP "WinUtil-Max_Win11ISO_$(Get-Date -Format ''yyyyMMdd_HHmmss'')"',
             '$workDir = "$($workDir)_$(([guid]::NewGuid()).ToString(''N'').Substring(0, 8))"'
         )) {
             $script:modifyFunction | Should -Match ([regex]::Escape($expectedText))

@@ -68,7 +68,7 @@ BeforeAll {
 
     function script:Get-WinUtilGeneratedControlNames {
         $names = New-Object System.Collections.Generic.List[string]
-        foreach ($configName in @("appnavigation", "tweaks", "feature", "appx")) {
+        foreach ($configName in @("appnavigation", "tweaks", "feature", "appx", "max")) {
             $config = Get-WinUtilConfigObject -Name $configName
             foreach ($entry in $config.PSObject.Properties.Name) {
                 $names.Add($entry)
@@ -168,11 +168,13 @@ Describe "XAML document" {
             "WPFTab4",
             "WPFTab5",
             "WPFTab6",
+            "WPFTab7",
             "WPFTab1BT",
             "WPFTab2BT",
             "WPFTab3BT",
             "WPFTab4BT",
             "WPFTab5BT",
+            "WPFTab7BT",
             "SearchBar",
             "SearchBarIcon",
             "SearchBarClearButton",
@@ -289,7 +291,8 @@ Describe "XAML document" {
             "WPFTab3:Config",
             "WPFTab4:Updates",
             "WPFTab5:Win11ISO",
-            "WPFTab6:AppX"
+            "WPFTab6:AppX",
+            "WPFTab7:MAX"
         )
 
         if (@($actualTabs).Count -ne $expectedTabs.Count) {
@@ -346,7 +349,7 @@ Describe "XAML document" {
         $comboToggleStyle | Should -Not -BeNullOrEmpty
         $comboToggle.GetAttribute("Style") | Should -Be "{StaticResource ComboBoxToggleButtonStyle}"
         $comboItemStyle | Should -Not -BeNullOrEmpty
-        $navButtons.Count | Should -Be 5
+        $navButtons.Count | Should -Be 6
         foreach ($navButton in $navButtons) {
             $navButton.GetAttribute("Style") | Should -Be "{StaticResource TabToggleButton}"
         }

@@ -170,15 +170,6 @@ function Start-WinUtilUserInterface {
             return
         }
 
-        # Show Vecna Exit screen once before closing
-        if (-not $sync.ForceClose -and -not $sync.FinishInConsole) {
-            $shown = Invoke-WinUtilVecnaExit
-            if ($shown) {
-                $closingArgs.Cancel = $true
-                return
-            }
-        }
-
         # Work that is meant to outlive the window needs the pool it is running on. main.ps1
         # waits for it and shuts the pool down once it is done.
         if ($sync.FinishInConsole) {
@@ -222,6 +213,7 @@ function Start-WinUtilUserInterface {
                 "C" { Invoke-WPFButton "WPFTab3BT"; $keyEventArgs.Handled = $true } # Navigate to Config tab
                 "U" { Invoke-WPFButton "WPFTab4BT"; $keyEventArgs.Handled = $true } # Navigate to Updates tab
                 "W" { Invoke-WPFButton "WPFTab5BT"; $keyEventArgs.Handled = $true } # Navigate to Win11ISO tab
+                "M" { Invoke-WPFButton "WPFTab7BT"; $keyEventArgs.Handled = $true } # Navigate to MAX tab
             }
         }
         # Handle Ctrl key combinations for specific actions
@@ -279,28 +271,6 @@ function Start-WinUtilUserInterface {
     })
 
     $sync["Form"].Add_ContentRendered({
-        # Load the Windows Forms assembly
-        Add-Type -AssemblyName System.Windows.Forms
-        $primaryScreen = [System.Windows.Forms.Screen]::PrimaryScreen
-        # Check if the primary screen is found
-        if ($primaryScreen) {
-            # Extract usable working area (excluding Windows taskbar)
-            $workingArea = $primaryScreen.WorkingArea
-            $screenWidth = $workingArea.Width
-            $screenHeight = $workingArea.Height
-            $sync.Form.MinWidth = [Math]::Min(800, [double]$screenWidth)
-            $sync.Form.MinHeight = [Math]::Min(550, [double]$screenHeight)
-
-            # Ensure open, adjustable compatible sizing like original Chris Titus WinUtil
-            $targetWidth = [Math]::Min(1180, [int]($screenWidth * 0.92))
-            $targetHeight = [Math]::Min(760, [int]($screenHeight * 0.88))
-            $sync.Form.Width = [Math]::Max(800, $targetWidth)
-            $sync.Form.Height = [Math]::Max(550, $targetHeight)
-
-            # Center window cleanly on the display working area
-            $sync.Form.Left = [Math]::Max(0, [int]($workingArea.Left + ($screenWidth - $sync.Form.Width) / 2))
-            $sync.Form.Top = [Math]::Max(0, [int]($workingArea.Top + ($screenHeight - $sync.Form.Height) / 2))
-        }
 
         if ($PARAM_OFFLINE) {
             # Show offline banner
@@ -397,8 +367,11 @@ function Start-WinUtilUserInterface {
     $sync["Form"].Add_Loaded({
         param($e)
         $null = $e
-        $sync.Form.MinWidth = "800"
-        $sync.Form.MinHeight = "550"
+        $workArea = [System.Windows.SystemParameters]::WorkArea
+        if ($workArea.Width -gt 0 -and $workArea.Height -gt 0) {
+            $sync.Form.MinWidth = [Math]::Min(850, [double]$workArea.Width)
+            $sync.Form.MinHeight = [Math]::Min(520, [double]$workArea.Height)
+        }
         $sync["Form"].MaxWidth = [Double]::PositiveInfinity
         $sync["Form"].MaxHeight = [Double]::PositiveInfinity
 
@@ -452,34 +425,22 @@ function Start-WinUtilUserInterface {
         Invoke-WPFPopup -Action "Hide" -Popups @("Settings")
 
         $authorInfo = @"
-Author   : <a href="https://github.com/ChrisTitusTech">@ChrisTitusTech</a>
-UI       : <a href="https://github.com/MyDrift-user">@MyDrift-user</a>, <a href="https://github.com/Marterich">@Marterich</a>
-Runspace : <a href="https://github.com/DeveloperDurp">@DeveloperDurp</a>, <a href="https://github.com/Marterich">@Marterich</a>
-GitHub   : <a href="https://github.com/ChrisTitusTech/winutil">ChrisTitusTech/winutil</a>
-Version  : <a href="https://github.com/ChrisTitusTech/winutil/releases/tag/$($sync.version)">$($sync.version)</a>
+WinUtil-Max: Enhanced Windows Utility Hub
+Maintainer : <a href="https://github.com/R-Rinku">@R-Rinku</a>
+GitHub     : <a href="https://github.com/R-Rinku/winutil-max">R-Rinku/winutil-max</a>
+Version    : <a href="https://github.com/R-Rinku/winutil-max/releases/tag/$($sync.version)">$($sync.version)</a>
+
+Credits & Attributions:
+Original Project : <a href="https://github.com/ChrisTitusTech/winutil">ChrisTitusTech/winutil</a>
+Created by       : <a href="https://github.com/ChrisTitusTech">@ChrisTitusTech</a>
+Core Design/UI   : <a href="https://github.com/MyDrift-user">@MyDrift-user</a>, <a href="https://github.com/Marterich">@Marterich</a>
+Runspace Engine  : <a href="https://github.com/DeveloperDurp">@DeveloperDurp</a>, <a href="https://github.com/Marterich">@Marterich</a>
 "@
-        Show-CustomDialog -Title "About" -Message $authorInfo
+        Show-CustomDialog -Title "About WinUtil-Max" -Message $authorInfo
     })
     $sync["DocumentationMenuItem"].Add_Click({
         Invoke-WPFPopup -Action "Hide" -Popups @("Settings")
-        Start-Process "https://winutil.christitus.com/"
-    })
-    $sync["SponsorMenuItem"].Add_Click({
-        Invoke-WPFPopup -Action "Hide" -Popups @("Settings")
-
-        $authorInfo = @"
-<a href="https://github.com/sponsors/ChrisTitusTech">Current sponsors for ChrisTitusTech:</a>
-"@
-        $authorInfo += "`n"
-        try {
-            $sponsors = Invoke-WinUtilSponsors
-            foreach ($sponsor in $sponsors) {
-                $authorInfo += "<a href=`"https://github.com/sponsors/ChrisTitusTech`">$sponsor</a>`n"
-            }
-        } catch {
-            $authorInfo += "An error occurred while fetching or processing the sponsors: $_`n"
-        }
-        Show-CustomDialog -Title "Sponsors" -Message $authorInfo -EnableScroll $true
+        Start-Process "https://github.com/R-Rinku/winutil-max"
     })
 
     # Font Scaling Event Handlers
@@ -561,6 +522,18 @@ Version  : <a href="https://github.com/ChrisTitusTech/winutil/releases/tag/$($sy
         $sinceStart = [int]((Get-Date) - $sync.StartedAt).TotalMilliseconds
         Write-WinUtilLog -Level "DEBUG" -Component "UI" -Message "timing: interface ready for input $sinceStart ms after start."
     }) | Out-Null
+
+    # Pre-calculate centered size and position based on WPF WorkArea before showing
+    $workArea = [System.Windows.SystemParameters]::WorkArea
+    if ($workArea.Width -gt 0 -and $workArea.Height -gt 0) {
+        $targetWidth = [Math]::Min(1360, [Math]::Max(850, [int]($workArea.Width * 0.96)))
+        $targetHeight = [Math]::Min(860, [Math]::Max(520, [int]($workArea.Height * 0.93)))
+        $sync.Form.Width = $targetWidth
+        $sync.Form.Height = $targetHeight
+        $sync.Form.WindowStartupLocation = [System.Windows.WindowStartupLocation]::Manual
+        $sync.Form.Left = [Math]::Max(0, [int]($workArea.Left + ($workArea.Width - $targetWidth) / 2))
+        $sync.Form.Top = [Math]::Max(0, [int]($workArea.Top + ($workArea.Height - $targetHeight) / 2))
+    }
 
     $sync["Form"].ShowDialog() | Out-Null
 

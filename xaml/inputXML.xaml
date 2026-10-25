@@ -7,11 +7,11 @@
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
         WindowStyle="SingleBorderWindow"
-        Width="1180"
-        Height="760"
-        MinWidth="800"
-        MinHeight="550"
-        Title="winutil-MAX - Running Up That Hill">
+        Width="1200"
+        Height="640"
+        MinWidth="850"
+        MinHeight="520"
+        Title="WinUtil-Max">
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="30" CornerRadius="10" UseAeroCaptionButtons="False" ResizeBorderThickness="6"/>
     </WindowChrome.WindowChrome>
@@ -1243,7 +1243,6 @@
                             <Separator/>
                             <MenuItem FontSize="{DynamicResource ButtonFontSize}" Header="About" Name="AboutMenuItem" Foreground="{DynamicResource MainForegroundColor}"/>
                             <MenuItem FontSize="{DynamicResource ButtonFontSize}" Header="Documentation" Name="DocumentationMenuItem" Foreground="{DynamicResource MainForegroundColor}"/>
-                            <MenuItem FontSize="{DynamicResource ButtonFontSize}" Header="Sponsors" Name="SponsorMenuItem" Foreground="{DynamicResource MainForegroundColor}"/>
                         </StackPanel>
                     </Border>
                 </Popup>
@@ -1376,6 +1375,14 @@
                     <ToggleButton.Content>
                         <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonWin11ISOForegroundColor}">
                             <Underline>W</Underline>in11 Creator
+                        </TextBlock>
+                    </ToggleButton.Content>
+                </ToggleButton>
+                <ToggleButton Style="{StaticResource TabToggleButton}" Margin="0,0,5,0" Height="{DynamicResource TabButtonHeight}" Width="Auto" MinWidth="{DynamicResource TabButtonWidth}"
+                    Background="{DynamicResource ButtonConfigBackgroundColor}" Foreground="{DynamicResource ButtonConfigForegroundColor}" FontWeight="Bold" Name="WPFTab7BT">
+                    <ToggleButton.Content>
+                        <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonConfigForegroundColor}">
+                            <Underline>M</Underline>AX
                         </TextBlock>
                     </ToggleButton.Content>
                 </ToggleButton>
@@ -2313,6 +2320,12 @@
                     </Border>
                 </Grid>
             </TabItem>
+            <TabItem Header="MAX" Visibility="Collapsed" Name="WPFTab7">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="{DynamicResource TabContentMargin}">
+                    <Grid Name="maxpanel" Grid.Row="1" Background="Transparent">
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
         </TabControl>
 
         <!-- Window-level progress indicator - visible regardless of active tab -->
@@ -2332,59 +2345,5 @@
 
 
 
-        <!-- Vecna Exit and Completion Modal Overlay -->
-        <Grid Name="WPFVecnaOverlay" Grid.Row="0" Grid.RowSpan="6" Background="#F208080C" Panel.ZIndex="1001" Visibility="Collapsed">
-            <Border HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Background="#16080A" BorderBrush="#FF1824" BorderThickness="2" CornerRadius="12"
-                    MaxWidth="640" Margin="20" Padding="18">
-                <Border.Effect>
-                    <DropShadowEffect Color="#FF1824" BlurRadius="30" ShadowDepth="0" Opacity="0.95"/>
-                </Border.Effect>
-                <StackPanel HorizontalAlignment="Center">
-                    <!-- Glowing Red Header -->
-                    <TextBlock Name="WPFVecnaHeader"
-                               Text="VECNA IS WATCHING..."
-                               FontFamily="Century Gothic, Segoe UI"
-                               FontWeight="Black"
-                               FontSize="22"
-                               Foreground="#FF2A3A"
-                               HorizontalAlignment="Center"
-                               Margin="0,0,0,12">
-                        <TextBlock.Effect>
-                            <DropShadowEffect Color="#FF1824" BlurRadius="12" ShadowDepth="0" Opacity="0.9"/>
-                        </TextBlock.Effect>
-                    </TextBlock>
-
-                    <!-- Vecna Image with rounded corners and glowing shadow -->
-                    <Border CornerRadius="8" ClipToBounds="True" MaxWidth="580" MaxHeight="320" Margin="0,0,0,14" BorderBrush="#44FF1824" BorderThickness="1">
-                        <Image Name="WPFVecnaImage" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-
-                    <!-- Message text -->
-                    <TextBlock Name="WPFVecnaMessage"
-                               Text="You cannot escape the Upside Down... Closing WinUtil."
-                               FontFamily="Segoe UI"
-                               FontSize="13"
-                               Foreground="#FFEEEEEE"
-                               HorizontalAlignment="Center"
-                               TextWrapping="Wrap"
-                               TextAlignment="Center"
-                               Margin="0,0,0,14"/>
-
-                    <!-- Action buttons -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button Name="WPFVecnaDismissButton"
-                                Content="Close Now"
-                                Style="{StaticResource HoverButtonStyle}"
-                                Background="#33FF1824"
-                                Foreground="#FF2A3A"
-                                FontWeight="Bold"
-                                FontSize="13"
-                                Padding="16,6"
-                                Margin="6,0,6,0"/>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-        </Grid>
     </Grid>
 </Window>
