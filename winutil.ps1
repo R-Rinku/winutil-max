@@ -3,7 +3,7 @@
     Author         : Chris Titus @christitustech
     Runspace Author: @DeveloperDurp
     GitHub         : https://github.com/ChrisTitusTech
-    Version        : 26.10.20
+    Version        : 26.10.25
 #>
 
 param (
@@ -217,7 +217,7 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 
 # Variable to sync between runspaces
 $sync = [Hashtable]::Synchronized(@{})
-$sync.version = "26.10.20"
+$sync.version = "26.10.25"
 $sync.IsLocalCompile = "true" -eq "true"
 $sync.configs = @{}
 $sync.Buttons = [System.Collections.Generic.List[PSObject]]::new()
@@ -242,7 +242,7 @@ $sync.selectedFeatures = [System.Collections.Generic.List[string]]::new()
 $sync.currentTab = "Install"
 
 $dateTime = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
-$winutildir = "$env:LocalAppData\winutil"
+$winutildir = "$env:LocalAppData\winutil-max"
 $sync.winutildir = $winutildir
 
 $logdir = "$winutildir\logs"
@@ -252,11 +252,11 @@ if (-not (Test-Path $logdir)) {
 }
 # Keep console output and structured entries in the path reported to the user. Write-WinUtilLog
 # writes through the host while this transcript owns the file, avoiding competing file handles.
-$sync.logPath = "$logdir\winutil_$dateTime.log"
+$sync.logPath = "$logdir\winutil_max_$dateTime.log"
 $sync.transcriptPath = $sync.logPath
 Start-Transcript -Path $sync.transcriptPath -Append -NoClobber | Out-Null
 
-$Host.UI.RawUI.WindowTitle = "WinUtil"
+$Host.UI.RawUI.WindowTitle = "WinUtil-Max"
 Clear-Host
 function Add-SelectedAppsMenuItem {
     <#
@@ -1947,11 +1947,14 @@ function Initialize-InstallCategoryAppList {
         # costs about seventy times as much per app.
         foreach ($appKey in $Apps.Keys) {
             if (-not $appKey.StartsWith("WPFInstall")) { continue }
+            if ($appKey.StartsWith("WPFInstallWPFInstall")) { continue }
             $category = $Apps[$appKey].Category
             if (-not $appsByCategory.ContainsKey($category)) {
                 $appsByCategory[$category] = [System.Collections.Generic.List[string]]::new()
             }
-            $appsByCategory[$category].Add($appKey)
+            if (-not $appsByCategory[$category].Contains($appKey)) {
+                $appsByCategory[$category].Add($appKey)
+            }
         }
         $sync.InstallAppRenderQueue = [System.Collections.Queue]::new()
 
@@ -2154,6 +2157,9 @@ function Initialize-WinUtilTabContent {
                 if (Test-WinUtilUIAlive) {
                     $sync.Form.Dispatcher.BeginInvoke([System.Windows.Threading.DispatcherPriority]::Background, [action]{ Invoke-WinUtilISOCheckExistingWork }) | Out-Null
                 }
+            }
+            "MAX" {
+                Invoke-WPFUIElements -configVariable $sync.configs.max -targetGridName "maxpanel" -columncount 2 -Yield:$Yield
             }
         }
         # Controls built just now start unchecked, so anything already chosen by an import or a
@@ -3691,7 +3697,7 @@ function Invoke-WinUtilISOModify {
     $selectedEditionName = if ($selectedItem) { ($selectedItem -replace '^\d+:\s*', '') } else { "Unknown" }
 
     # A fresh working directory per run; existing-work detection is only for resuming an export
-    $workDir = Join-Path $env:TEMP "WinUtil_Win11ISO_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+    $workDir = Join-Path $env:TEMP "WinUtil-Max_Win11ISO_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
     if (Test-Path $workDir) {
         $workDir = "$($workDir)_$(([guid]::NewGuid()).ToString('N').Substring(0, 8))"
     }
@@ -3699,8 +3705,8 @@ function Invoke-WinUtilISOModify {
     $autounattendContent = if ($WinUtilAutounattendXml) {
         $WinUtilAutounattendXml
     } else {
-        $toolsXml = Join-Path $PSScriptRoot "..\..\tools\autounattend.xml"
-        if (Test-Path $toolsXml) { Get-Content $toolsXml -Raw } else { "" }
+        $toolsXml = if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) { Join-Path $PSScriptRoot "..\..\tools\autounattend.xml" } else { "" }
+        if (-not [string]::IsNullOrWhiteSpace($toolsXml) -and (Test-Path $toolsXml)) { Get-Content $toolsXml -Raw } else { "" }
     }
 
     Start-WinUtilJob -Name "ISO modify" -Description "Modifying ISO" -Parameters @{
@@ -3848,7 +3854,7 @@ function Invoke-WinUtilISOCheckExistingWork {
     }
     $sync["Win11ISOExistingWorkRetryPending"] = $false
 
-    $existingWorkDir = Get-Item -Path (Join-Path $env:TEMP "WinUtil_Win11ISO*") |
+    $existingWorkDir = Get-Item -Path @((Join-Path $env:TEMP "WinUtil-Max_Win11ISO*"), (Join-Path $env:TEMP "WinUtil_Win11ISO*")) -ErrorAction SilentlyContinue |
         Where-Object { $_.PSIsContainer } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
     if (-not $existingWorkDir) { return }
@@ -5353,179 +5359,23 @@ function Invoke-WinUtilSSHServer {
 }
 
 function Get-WinUtilVecnaImage {
-    <#
-        .SYNOPSIS
-            Retrieves or downloads the Vecna image and returns a WPF BitmapImage.
-    #>
     [CmdletBinding()]
     param()
-
-    if ($null -ne $script:WinUtilVecnaBitmapImage) {
-        return $script:WinUtilVecnaBitmapImage
-    }
-
-    $candidates = @(
-        ".\Vecna.jpg",
-        (Join-Path (Get-Location).Path "Vecna.jpg"),
-        "c:\Users\Rinku\Github\Windows-Tweaks-Hub\Vecna.jpg",
-        (Join-Path $env:LOCALAPPDATA "winutil\Vecna.jpg")
-    )
-    if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
-        $candidates = @(
-            (Join-Path $PSScriptRoot "Vecna.jpg"),
-            (Join-Path $PSScriptRoot "..\..\Vecna.jpg")
-        ) + $candidates
-    }
-
-    foreach ($path in $candidates) {
-        if (-not [string]::IsNullOrWhiteSpace($path) -and (Test-Path -LiteralPath $path -ErrorAction SilentlyContinue)) {
-            try {
-                $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $path).Path)
-                $ms = New-Object System.IO.MemoryStream(,$bytes)
-                $img = New-Object System.Windows.Media.Imaging.BitmapImage
-                $img.BeginInit()
-                $img.StreamSource = $ms
-                $img.CacheOption = [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
-                $img.EndInit()
-                if ($img.CanFreeze) { $img.Freeze() }
-                $script:WinUtilVecnaBitmapImage = $img
-                return $img
-            } catch {
-                # Fall through to next candidate
-            }
-        }
-    }
-
-    # Attempt download from remote if running via web
-    try {
-        $cacheDir = Join-Path $env:LOCALAPPDATA "winutil"
-        if (-not (Test-Path -LiteralPath $cacheDir)) {
-            New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null
-        }
-        $cachedPath = Join-Path $cacheDir "Vecna.jpg"
-        $urls = @(
-            "https://raw.githubusercontent.com/R-Rinku/winutil-max/main/Vecna.jpg",
-            "https://rinkurapria.dev/Vecna.jpg"
-        )
-        foreach ($url in $urls) {
-            try {
-                Invoke-WebRequest -Uri $url -OutFile $cachedPath -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
-                if (Test-Path -LiteralPath $cachedPath) {
-                    $bytes = [System.IO.File]::ReadAllBytes($cachedPath)
-                    $ms = New-Object System.IO.MemoryStream(,$bytes)
-                    $img = New-Object System.Windows.Media.Imaging.BitmapImage
-                    $img.BeginInit()
-                    $img.StreamSource = $ms
-                    $img.CacheOption = [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
-                    $img.EndInit()
-                    if ($img.CanFreeze) { $img.Freeze() }
-                    $script:WinUtilVecnaBitmapImage = $img
-                    return $img
-                }
-            } catch {}
-        }
-    } catch {}
-
     return $null
 }
 
 function Invoke-WinUtilVecnaExit {
-    <#
-        .SYNOPSIS
-            Displays the Vecna exit screen when the user closes the window.
-            Returns $true if the screen was shown and close was deferred, $false if already handled.
-    #>
     [CmdletBinding()]
     param()
-
-    if ($null -eq $sync -or $null -eq $sync.WPFVecnaOverlay) {
-        return $false
-    }
-
-    if ($script:WinUtilVecnaExitHandled) {
-        return $false
-    }
-
-    $script:WinUtilVecnaExitHandled = $true
-
-    try {
-        $img = Get-WinUtilVecnaImage
-        if ($null -ne $img -and $null -ne $sync.WPFVecnaImage) {
-            $sync.WPFVecnaImage.Source = $img
-        }
-
-        if ($null -ne $sync.WPFVecnaHeader) {
-            $sync.WPFVecnaHeader.Text = "VECNA IS WATCHING..."
-        }
-        if ($null -ne $sync.WPFVecnaMessage) {
-            $sync.WPFVecnaMessage.Text = "You cannot escape the Upside Down... Closing WinUtil."
-        }
-        if ($null -ne $sync.WPFVecnaDismissButton) {
-            $sync.WPFVecnaDismissButton.Content = "Exit Now"
-            $sync.WPFVecnaDismissButton.Add_Click({
-                $sync.Form.Close()
-            })
-        }
-
-        $sync.WPFVecnaOverlay.Visibility = [System.Windows.Visibility]::Visible
-
-        # Auto close after 2.0 seconds if user does not click Exit Now
-        $autoCloseTimer = New-Object System.Windows.Threading.DispatcherTimer
-        $autoCloseTimer.Interval = [TimeSpan]::FromSeconds(2.0)
-        $autoCloseTimer.Add_Tick({
-            $this.Stop()
-            if (Test-WinUtilUIAlive) {
-                $sync.Form.Close()
-            }
-        })
-        $autoCloseTimer.Start()
-
-        return $true
-    } catch {
-        return $false
-    }
+    return $false
 }
 
 function Invoke-WinUtilVecnaCompletion {
-    <#
-        .SYNOPSIS
-            Displays the Vecna screen when operations/scripts finish.
-    #>
     [CmdletBinding()]
     param(
         [Parameter()]
         [string]$JobLabel = "Operations"
     )
-
-    if (-not (Test-WinUtilUIAlive) -or $null -eq $sync.WPFVecnaOverlay) {
-        return
-    }
-
-    Invoke-WPFUIThread -Async -ScriptBlock {
-        try {
-            $img = Get-WinUtilVecnaImage
-            if ($null -ne $img -and $null -ne $sync.WPFVecnaImage) {
-                $sync.WPFVecnaImage.Source = $img
-            }
-
-            if ($null -ne $sync.WPFVecnaHeader) {
-                $sync.WPFVecnaHeader.Text = "RUNNING UP THAT HILL"
-            }
-            if ($null -ne $sync.WPFVecnaMessage) {
-                $sync.WPFVecnaMessage.Text = "$JobLabel completed successfully! You have escaped the Upside Down."
-            }
-            if ($null -ne $sync.WPFVecnaDismissButton) {
-                $sync.WPFVecnaDismissButton.Content = "Continue"
-                $sync.WPFVecnaDismissButton.Add_Click({
-                    if ($null -ne $sync.WPFVecnaOverlay) {
-                        $sync.WPFVecnaOverlay.Visibility = [System.Windows.Visibility]::Collapsed
-                    }
-                })
-            }
-
-            $sync.WPFVecnaOverlay.Visibility = [System.Windows.Visibility]::Visible
-        } catch {}
-    }
 }
 
 function Invoke-WinutilThemeChange {
@@ -7780,13 +7630,6 @@ function Start-WinUtilJob {
                     # The worker is still finished, so its slot must always be released.
                     $null = Clear-WinUtilActiveJob -Token $JobToken
 
-                    # Display Vecna completion modal overlay
-                    try {
-                        if (Test-WinUtilUIAlive) {
-                            Invoke-WinUtilVecnaCompletion -JobLabel $JobLabel
-                        }
-                    } catch {}
-
                     # Auto-hide progress bar 3 seconds after job finishes so it does not linger indefinitely
                     try {
                         if (Test-WinUtilUIAlive) {
@@ -8073,15 +7916,6 @@ function Start-WinUtilUserInterface {
             return
         }
 
-        # Show Vecna Exit screen once before closing
-        if (-not $sync.ForceClose -and -not $sync.FinishInConsole) {
-            $shown = Invoke-WinUtilVecnaExit
-            if ($shown) {
-                $closingArgs.Cancel = $true
-                return
-            }
-        }
-
         # Work that is meant to outlive the window needs the pool it is running on. main.ps1
         # waits for it and shuts the pool down once it is done.
         if ($sync.FinishInConsole) {
@@ -8125,6 +7959,7 @@ function Start-WinUtilUserInterface {
                 "C" { Invoke-WPFButton "WPFTab3BT"; $keyEventArgs.Handled = $true } # Navigate to Config tab
                 "U" { Invoke-WPFButton "WPFTab4BT"; $keyEventArgs.Handled = $true } # Navigate to Updates tab
                 "W" { Invoke-WPFButton "WPFTab5BT"; $keyEventArgs.Handled = $true } # Navigate to Win11ISO tab
+                "M" { Invoke-WPFButton "WPFTab7BT"; $keyEventArgs.Handled = $true } # Navigate to MAX tab
             }
         }
         # Handle Ctrl key combinations for specific actions
@@ -8182,28 +8017,6 @@ function Start-WinUtilUserInterface {
     })
 
     $sync["Form"].Add_ContentRendered({
-        # Load the Windows Forms assembly
-        Add-Type -AssemblyName System.Windows.Forms
-        $primaryScreen = [System.Windows.Forms.Screen]::PrimaryScreen
-        # Check if the primary screen is found
-        if ($primaryScreen) {
-            # Extract usable working area (excluding Windows taskbar)
-            $workingArea = $primaryScreen.WorkingArea
-            $screenWidth = $workingArea.Width
-            $screenHeight = $workingArea.Height
-            $sync.Form.MinWidth = [Math]::Min(800, [double]$screenWidth)
-            $sync.Form.MinHeight = [Math]::Min(550, [double]$screenHeight)
-
-            # Ensure open, adjustable compatible sizing like original Chris Titus WinUtil
-            $targetWidth = [Math]::Min(1180, [int]($screenWidth * 0.92))
-            $targetHeight = [Math]::Min(760, [int]($screenHeight * 0.88))
-            $sync.Form.Width = [Math]::Max(800, $targetWidth)
-            $sync.Form.Height = [Math]::Max(550, $targetHeight)
-
-            # Center window cleanly on the display working area
-            $sync.Form.Left = [Math]::Max(0, [int]($workingArea.Left + ($screenWidth - $sync.Form.Width) / 2))
-            $sync.Form.Top = [Math]::Max(0, [int]($workingArea.Top + ($screenHeight - $sync.Form.Height) / 2))
-        }
 
         if ($PARAM_OFFLINE) {
             # Show offline banner
@@ -8300,8 +8113,11 @@ function Start-WinUtilUserInterface {
     $sync["Form"].Add_Loaded({
         param($e)
         $null = $e
-        $sync.Form.MinWidth = "800"
-        $sync.Form.MinHeight = "550"
+        $workArea = [System.Windows.SystemParameters]::WorkArea
+        if ($workArea.Width -gt 0 -and $workArea.Height -gt 0) {
+            $sync.Form.MinWidth = [Math]::Min(850, [double]$workArea.Width)
+            $sync.Form.MinHeight = [Math]::Min(520, [double]$workArea.Height)
+        }
         $sync["Form"].MaxWidth = [Double]::PositiveInfinity
         $sync["Form"].MaxHeight = [Double]::PositiveInfinity
 
@@ -8355,34 +8171,22 @@ function Start-WinUtilUserInterface {
         Invoke-WPFPopup -Action "Hide" -Popups @("Settings")
 
         $authorInfo = @"
-Author   : <a href="https://github.com/ChrisTitusTech">@ChrisTitusTech</a>
-UI       : <a href="https://github.com/MyDrift-user">@MyDrift-user</a>, <a href="https://github.com/Marterich">@Marterich</a>
-Runspace : <a href="https://github.com/DeveloperDurp">@DeveloperDurp</a>, <a href="https://github.com/Marterich">@Marterich</a>
-GitHub   : <a href="https://github.com/ChrisTitusTech/winutil">ChrisTitusTech/winutil</a>
-Version  : <a href="https://github.com/ChrisTitusTech/winutil/releases/tag/$($sync.version)">$($sync.version)</a>
+WinUtil-Max: Enhanced Windows Utility Hub
+Maintainer : <a href="https://github.com/R-Rinku">@R-Rinku</a>
+GitHub     : <a href="https://github.com/R-Rinku/winutil-max">R-Rinku/winutil-max</a>
+Version    : <a href="https://github.com/R-Rinku/winutil-max/releases/tag/$($sync.version)">$($sync.version)</a>
+
+Credits & Attributions:
+Original Project : <a href="https://github.com/ChrisTitusTech/winutil">ChrisTitusTech/winutil</a>
+Created by       : <a href="https://github.com/ChrisTitusTech">@ChrisTitusTech</a>
+Core Design/UI   : <a href="https://github.com/MyDrift-user">@MyDrift-user</a>, <a href="https://github.com/Marterich">@Marterich</a>
+Runspace Engine  : <a href="https://github.com/DeveloperDurp">@DeveloperDurp</a>, <a href="https://github.com/Marterich">@Marterich</a>
 "@
-        Show-CustomDialog -Title "About" -Message $authorInfo
+        Show-CustomDialog -Title "About WinUtil-Max" -Message $authorInfo
     })
     $sync["DocumentationMenuItem"].Add_Click({
         Invoke-WPFPopup -Action "Hide" -Popups @("Settings")
-        Start-Process "https://winutil.christitus.com/"
-    })
-    $sync["SponsorMenuItem"].Add_Click({
-        Invoke-WPFPopup -Action "Hide" -Popups @("Settings")
-
-        $authorInfo = @"
-<a href="https://github.com/sponsors/ChrisTitusTech">Current sponsors for ChrisTitusTech:</a>
-"@
-        $authorInfo += "`n"
-        try {
-            $sponsors = Invoke-WinUtilSponsors
-            foreach ($sponsor in $sponsors) {
-                $authorInfo += "<a href=`"https://github.com/sponsors/ChrisTitusTech`">$sponsor</a>`n"
-            }
-        } catch {
-            $authorInfo += "An error occurred while fetching or processing the sponsors: $_`n"
-        }
-        Show-CustomDialog -Title "Sponsors" -Message $authorInfo -EnableScroll $true
+        Start-Process "https://github.com/R-Rinku/winutil-max"
     })
 
     # Font Scaling Event Handlers
@@ -8464,6 +8268,18 @@ Version  : <a href="https://github.com/ChrisTitusTech/winutil/releases/tag/$($sy
         $sinceStart = [int]((Get-Date) - $sync.StartedAt).TotalMilliseconds
         Write-WinUtilLog -Level "DEBUG" -Component "UI" -Message "timing: interface ready for input $sinceStart ms after start."
     }) | Out-Null
+
+    # Pre-calculate centered size and position based on WPF WorkArea before showing
+    $workArea = [System.Windows.SystemParameters]::WorkArea
+    if ($workArea.Width -gt 0 -and $workArea.Height -gt 0) {
+        $targetWidth = [Math]::Min(1360, [Math]::Max(850, [int]($workArea.Width * 0.96)))
+        $targetHeight = [Math]::Min(860, [Math]::Max(520, [int]($workArea.Height * 0.93)))
+        $sync.Form.Width = $targetWidth
+        $sync.Form.Height = $targetHeight
+        $sync.Form.WindowStartupLocation = [System.Windows.WindowStartupLocation]::Manual
+        $sync.Form.Left = [Math]::Max(0, [int]($workArea.Left + ($workArea.Width - $targetWidth) / 2))
+        $sync.Form.Top = [Math]::Max(0, [int]($workArea.Top + ($workArea.Height - $targetHeight) / 2))
+    }
 
     $sync["Form"].ShowDialog() | Out-Null
 
@@ -9382,14 +9198,14 @@ function Write-WinUtilLog {
 
         if ([string]::IsNullOrWhiteSpace($logPath) -and $null -ne $sync -and $sync.ContainsKey("winutildir")) {
             $logDirectory = Join-Path $sync.winutildir "logs"
-            $logPath = Join-Path $logDirectory "winutil_$(Get-Date -Format "yyyy-MM-dd_HH-mm-ss").log"
+            $logPath = Join-Path $logDirectory "winutil_max_$(Get-Date -Format "yyyy-MM-dd_HH-mm-ss").log"
             $sync.logPath = $logPath
         }
 
         if ([string]::IsNullOrWhiteSpace($logPath) -and -not [string]::IsNullOrWhiteSpace($env:LocalAppData)) {
             if ([string]::IsNullOrWhiteSpace($script:WinUtilLogPath)) {
-                $logDirectory = Join-Path (Join-Path $env:LocalAppData "winutil") "logs"
-                $script:WinUtilLogPath = Join-Path $logDirectory "winutil_$(Get-Date -Format "yyyy-MM-dd_HH-mm-ss").log"
+                $logDirectory = Join-Path (Join-Path $env:LocalAppData "winutil-max") "logs"
+                $script:WinUtilLogPath = Join-Path $logDirectory "winutil_max_$(Get-Date -Format "yyyy-MM-dd_HH-mm-ss").log"
             }
             $logPath = $script:WinUtilLogPath
         }
@@ -9726,6 +9542,216 @@ function Write-WinUtilAutoRunSummary {
     return 0
 }
 
+function Invoke-WinUtilBitLockerPolicy {
+    <#
+    .SYNOPSIS
+        Configures Windows Group Policy & Registry to allow BitLocker Startup PINs.
+    .DESCRIPTION
+        Enables UseAdvancedStartup, EnableBDEWithNoTPM, and TPM startup PIN policies
+        so BitLocker can be configured with a PIN at boot on any hardware (TPM or non-TPM).
+    #>
+    [CmdletBinding()]
+    param()
+
+    Write-WinUtilLog -Component "BitLocker" -Message "Configuring BitLocker Startup PIN Group Policy / Registry."
+    Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Configuring BitLocker Startup PIN policy..." -ForegroundColor Cyan
+
+    try {
+        $fveKey = "HKLM:\SOFTWARE\Policies\Microsoft\FVE"
+        if (-not (Test-Path $fveKey)) {
+            New-Item -Path $fveKey -Force | Out-Null
+        }
+
+        # Enable advanced startup options (allows PIN / startup key)
+        Set-ItemProperty -Path $fveKey -Name "UseAdvancedStartup" -Value 1 -Type DWord -Force
+        # Allow BitLocker without a compatible TPM (allows password/startup key on non-TPM devices)
+        Set-ItemProperty -Path $fveKey -Name "EnableBDEWithNoTPM" -Value 1 -Type DWord -Force
+        # Allow TPM (2 = Allow TPM)
+        Set-ItemProperty -Path $fveKey -Name "UseTPM" -Value 2 -Type DWord -Force
+        # Allow TPM startup PIN (2 = Allow startup PIN with TPM, 1 = Require)
+        Set-ItemProperty -Path $fveKey -Name "UseTPMPIN" -Value 2 -Type DWord -Force
+        # Allow TPM startup key
+        Set-ItemProperty -Path $fveKey -Name "UseTPMKey" -Value 2 -Type DWord -Force
+        # Allow TPM startup key and PIN
+        Set-ItemProperty -Path $fveKey -Name "UseTPMKeyPIN" -Value 2 -Type DWord -Force
+
+        # Force Group Policy refresh in background
+        Start-Process "gpupdate.exe" -ArgumentList "/target:computer /force" -NoNewWindow -Wait -ErrorAction SilentlyContinue
+
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] BitLocker Startup PIN policy enabled!" -ForegroundColor Green
+        Write-WinUtilLog -Component "BitLocker" -Message "BitLocker Startup PIN policy configured successfully."
+
+        if (Test-WinUtilUIAlive) {
+            Show-WinUtilMessage -Title "BitLocker Startup PIN Policy" -Message "BitLocker Startup PIN policy has been successfully configured and applied!`n`nYou can now set a startup PIN on your system drive (even on non-TPM hardware)." -Button "OK" -Icon "Information"
+        }
+    } catch {
+        Write-WinUtilLog -Level "ERROR" -Component "BitLocker" -Message "Failed to configure BitLocker policy: $_"
+        Write-Host "[winutil-MAX] [ERROR] Failed to configure BitLocker policy: $_" -ForegroundColor Red
+        if (Test-WinUtilUIAlive) {
+            Show-WinUtilMessage -Title "BitLocker Policy Error" -Message "Failed to enable BitLocker policy: $_" -Button "OK" -Icon "Error"
+        }
+    }
+}
+
+function Invoke-WinUtilInstallClaudeCLI {
+    <#
+    .SYNOPSIS
+        Installs Anthropic's official Claude Code CLI tool globally via npm.
+    #>
+    [CmdletBinding()]
+    param()
+
+    Write-WinUtilLog -Component "MAXTools" -Message "Installing Claude Code CLI..."
+    Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Checking for Node.js / npm environment..." -ForegroundColor Cyan
+
+    $npm = Get-Command "npm" -ErrorAction SilentlyContinue
+    if (-not $npm) {
+        Write-Host "[winutil-MAX] Node.js / npm was not found. Attempting to install Node.js LTS via winget..." -ForegroundColor Yellow
+        $winget = Get-Command "winget" -ErrorAction SilentlyContinue
+        if ($winget) {
+            Start-Process "winget.exe" -ArgumentList "install OpenJS.NodeJS.LTS --silent --accept-source-agreements --accept-package-agreements" -Wait -NoNewWindow
+            # Refresh PATH in current session
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        } else {
+            Write-Host "[winutil-MAX] [ERROR] Please install Node.js from https://nodejs.org first." -ForegroundColor Red
+            if (Test-WinUtilUIAlive) {
+                Show-WinUtilMessage -Title "Node.js Required" -Message "npm was not found. Please install Node.js from https://nodejs.org and rerun this installer." -Button "OK" -Icon "Warning"
+            }
+            return
+        }
+    }
+
+    Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Running 'npm install -g @anthropic-ai/claude-code'..." -ForegroundColor Cyan
+    $p = Start-Process -FilePath "cmd.exe" -ArgumentList "/c npm install -g @anthropic-ai/claude-code" -NoNewWindow -Wait -PassThru
+    if ($p.ExitCode -eq 0) {
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] Claude Code CLI installed successfully!" -ForegroundColor Green
+        Write-WinUtilLog -Component "MAXTools" -Message "Claude Code CLI installed successfully."
+        if (Test-WinUtilUIAlive) {
+            Show-WinUtilMessage -Title "Claude CLI Installed" -Message "Claude Code CLI (@anthropic-ai/claude-code) has been installed successfully!`n`nYou can run it from any terminal by typing 'claude'." -Button "OK" -Icon "Information"
+        }
+    } else {
+        Write-Host "[winutil-MAX] [ERROR] Failed to install Claude Code CLI (Exit code: $($p.ExitCode))." -ForegroundColor Red
+    }
+}
+
+function Invoke-WinUtilLaunchClaudeCLI {
+    <#
+    .SYNOPSIS
+        Opens a new terminal window running Claude Code CLI.
+    #>
+    [CmdletBinding()]
+    param()
+
+    Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Launching Claude CLI..." -ForegroundColor Cyan
+    Start-Process "cmd.exe" -ArgumentList "/k claude"
+}
+
+function Invoke-WinUtilInstallOmniRoute {
+    <#
+    .SYNOPSIS
+        Installs OmniRoute universal AI router & proxy gateway globally via npm.
+    #>
+    [CmdletBinding()]
+    param()
+
+    Write-WinUtilLog -Component "MAXTools" -Message "Installing OmniRoute AI Gateway..."
+    Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Checking for Node.js / npm environment..." -ForegroundColor Cyan
+
+    $npm = Get-Command "npm" -ErrorAction SilentlyContinue
+    if (-not $npm) {
+        Write-Host "[winutil-MAX] Node.js / npm was not found. Attempting to install Node.js LTS via winget..." -ForegroundColor Yellow
+        $winget = Get-Command "winget" -ErrorAction SilentlyContinue
+        if ($winget) {
+            Start-Process "winget.exe" -ArgumentList "install OpenJS.NodeJS.LTS --silent --accept-source-agreements --accept-package-agreements" -Wait -NoNewWindow
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        } else {
+            Write-Host "[winutil-MAX] [ERROR] Please install Node.js from https://nodejs.org first." -ForegroundColor Red
+            if (Test-WinUtilUIAlive) {
+                Show-WinUtilMessage -Title "Node.js Required" -Message "npm was not found. Please install Node.js from https://nodejs.org and rerun this installer." -Button "OK" -Icon "Warning"
+            }
+            return
+        }
+    }
+
+    Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Running 'npm install -g omniroute'..." -ForegroundColor Cyan
+    $p = Start-Process -FilePath "cmd.exe" -ArgumentList "/c npm install -g omniroute" -NoNewWindow -Wait -PassThru
+    if ($p.ExitCode -eq 0) {
+        Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] OmniRoute installed successfully!" -ForegroundColor Green
+        Write-WinUtilLog -Component "MAXTools" -Message "OmniRoute installed successfully."
+        if (Test-WinUtilUIAlive) {
+            Show-WinUtilMessage -Title "OmniRoute Installed" -Message "OmniRoute has been installed successfully!`n`nStart the router by running 'omniroute' in your terminal or clicking the Dashboard button." -Button "OK" -Icon "Information"
+        }
+    } else {
+        Write-Host "[winutil-MAX] [ERROR] Failed to install OmniRoute (Exit code: $($p.ExitCode))." -ForegroundColor Red
+    }
+}
+
+function Invoke-WinUtilLaunchOmniRoute {
+    <#
+    .SYNOPSIS
+        Opens the OmniRoute dashboard in the default browser.
+    #>
+    [CmdletBinding()]
+    param()
+
+    Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Opening OmniRoute dashboard..." -ForegroundColor Cyan
+    # Also attempt to ensure omniroute is started
+    Start-Process "cmd.exe" -ArgumentList "/c start /min omniroute" -WindowStyle Hidden -ErrorAction SilentlyContinue
+    Start-Process "http://localhost:20128/dashboard"
+}
+
+function Invoke-WinUtilSuperGodMode {
+    <#
+    .SYNOPSIS
+        Launches ThioJoe's Windows Super God Mode utility.
+    #>
+    [CmdletBinding()]
+    param()
+
+    Write-WinUtilLog -Component "MAXTools" -Message "Launching Windows Super God Mode..."
+    Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Launching ThioJoe's Windows Super God Mode..." -ForegroundColor Cyan
+
+    $candidates = @()
+    if ($sync -and $sync.winutildir) {
+        $candidates += Join-Path $sync.winutildir "Super_God_Mode.ps1"
+    }
+    if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+        $candidates += Join-Path $PSScriptRoot "scripts\super-god-mode\Super_God_Mode.ps1"
+        $candidates += Join-Path $PSScriptRoot "..\..\scripts\super-god-mode\Super_God_Mode.ps1"
+    }
+    $currPath = (Get-Location).Path
+    if (-not [string]::IsNullOrWhiteSpace($currPath)) {
+        $candidates += Join-Path $currPath "scripts\super-god-mode\Super_God_Mode.ps1"
+    }
+    $candidates += Join-Path ([System.IO.Path]::GetTempPath()) "Super_God_Mode.ps1"
+
+    $scriptPath = $candidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and (Test-Path $_) } | Select-Object -First 1
+
+    if (-not $scriptPath) {
+        $destDir = if ($sync -and $sync.winutildir) { $sync.winutildir } else { [System.IO.Path]::GetTempPath() }
+        $tempPath = Join-Path $destDir "Super_God_Mode.ps1"
+        Write-Host "[winutil-MAX] Downloading latest Super_God_Mode.ps1..." -ForegroundColor Cyan
+        try {
+            Invoke-RestMethod -Uri "https://raw.githubusercontent.com/R-Rinku/winutil-max/main/scripts/super-god-mode/Super_God_Mode.ps1" -OutFile $tempPath
+            $scriptPath = $tempPath
+        } catch {
+            try {
+                Invoke-RestMethod -Uri "https://raw.githubusercontent.com/ThioJoe/Windows-Super-God-Mode/main/Super_God_Mode.ps1" -OutFile $tempPath
+                $scriptPath = $tempPath
+            } catch {
+                Write-Host "[winutil-MAX] [ERROR] Failed to download Super God Mode: $($_.Exception.Message)" -ForegroundColor Red
+                if (Test-WinUtilUIAlive) {
+                    Show-WinUtilMessage -Title "Super God Mode" -Message "Failed to load Super God Mode script.`n`nError: $($_.Exception.Message)" -Button "OK" -Icon "Error"
+                }
+                return
+            }
+        }
+    }
+
+    Write-Host "[winutil-MAX] Opening Super God Mode from: $scriptPath" -ForegroundColor Green
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`"" -NoNewWindow
+}
+
 function Invoke-WPFAppxInstall {
     if ($null -eq $sync.selectedAppx -or $sync.selectedAppx.Count -eq 0) {
         Show-WinUtilMessage -Message "No AppX Package selected" -Title "Error" -Button "OK" -Icon "Error"
@@ -9865,7 +9891,9 @@ function Invoke-WPFButton {
     $workButtons = @(
         "WPFInstallUpgrade", "WPFAddUltPerf", "WPFRemoveUltPerf",
         "WPFUpdatesdefault", "WPFUpdatesdisable", "WPFUpdatessecurity",
-        "WPFGetInstalledAppx"
+        "WPFGetInstalledAppx", "WPFMaxTurboClean", "WPFMaxSystemRepair",
+        "WPFMaxInstallClaude", "WPFMaxInstallOmniRoute",
+        "WPFMaxBitLockerPolicy", "WPFMaxBitLockerStatus"
     )
 
     $featureEntry = $sync.configs.feature.$Button
@@ -9956,7 +9984,7 @@ function Invoke-WPFButtonAction {
         [switch]$UpdatesDisableConfirmed
     )
 
-    # Check if button is defined in feature config with function or InvokeScript
+    # Check if button is defined in feature or max config with function or InvokeScript
     if ($sync.configs.feature.$Button) {
         $buttonConfig = $sync.configs.feature.$Button
 
@@ -9977,6 +10005,17 @@ function Invoke-WPFButtonAction {
                 }
             }
             return
+        }
+    }
+
+    if ($sync.configs.max.$Button) {
+        $buttonConfig = $sync.configs.max.$Button
+        if ($buttonConfig.function) {
+            $functionName = $buttonConfig.function
+            if (Get-Command $functionName -ErrorAction SilentlyContinue) {
+                & $functionName
+                return
+            }
         }
     }
 
@@ -10074,15 +10113,13 @@ function Invoke-WPFButtonAction {
             }
         }
         "WPFselectedAppsButton" {$sync.selectedAppsPopup.IsOpen = -not $sync.selectedAppsPopup.IsOpen}
-        "WPFVecnaDismissButton" {
-            if ($null -ne $sync.WPFVecnaOverlay) {
-                if ($script:WinUtilVecnaExitHandled) {
-                    $sync.Form.Close()
-                } else {
-                    $sync.WPFVecnaOverlay.Visibility = [System.Windows.Visibility]::Collapsed
-                }
-            }
-        }
+        "WPFMaxSmartBulkRename" { Invoke-WPFSmartBulkRename }
+        "WPFMaxTakeOwnershipAdd" { Invoke-WPFTakeOwnershipAdd }
+        "WPFMaxTakeOwnershipRemove" { Invoke-WPFTakeOwnershipRemove }
+        "WPFMaxSuperGodMode" { Invoke-WinUtilSuperGodMode }
+        "WPFMaxBitLockerPolicy" { Invoke-WinUtilBitLockerPolicy }
+        "WPFMaxInstallClaude" { Invoke-WinUtilInstallClaudeCLI }
+        "WPFMaxInstallOmniRoute" { Invoke-WinUtilInstallOmniRoute }
     }
 }
 
@@ -11834,10 +11871,29 @@ Windows Registry Editor Version 5.00
 @="cmd.exe /c takeown /f \"%1\" /r /d y && icacls \"%1\" /grant *S-1-3-4:F /t /c"
 "@
 
-    $tempReg = Join-Path ([System.IO.Path]::GetTempPath()) "winutil_take_ownership_add_$([guid]::NewGuid().ToString('N')).reg"
+    $candidates = @()
+    if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+        $candidates += Join-Path $PSScriptRoot "..\..\scripts\take-ownership\Add_Take_Ownership_to_context_menu.reg"
+        $candidates += Join-Path $PSScriptRoot "scripts\take-ownership\Add_Take_Ownership_to_context_menu.reg"
+    }
+    $currPath = (Get-Location).Path
+    if (-not [string]::IsNullOrWhiteSpace($currPath)) {
+        $candidates += Join-Path $currPath "scripts\take-ownership\Add_Take_Ownership_to_context_menu.reg"
+    }
+
+    $localReg = $candidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and (Test-Path $_) } | Select-Object -First 1
+
+    $isTemp = $false
+    if ($localReg) {
+        $regFileToImport = $localReg
+    } else {
+        $regFileToImport = Join-Path ([System.IO.Path]::GetTempPath()) "winutil_max_take_ownership_add_$([guid]::NewGuid().ToString('N')).reg"
+        [System.IO.File]::WriteAllText($regFileToImport, $regContent, [System.Text.Encoding]::Unicode)
+        $isTemp = $true
+    }
+
     try {
-        [System.IO.File]::WriteAllText($tempReg, $regContent, [System.Text.Encoding]::Unicode)
-        $process = Start-Process -FilePath "reg.exe" -ArgumentList "import `"$tempReg`"" -Wait -PassThru -NoNewWindow
+        $process = Start-Process -FilePath "reg.exe" -ArgumentList "import `"$regFileToImport`"" -Wait -PassThru -NoNewWindow
         if ($process.ExitCode -eq 0) {
             Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] 'Take Full Ownership' added to right-click context menu." -ForegroundColor Green
             Write-WinUtilLog -Component "TakeOwnership" -Message "Take Full Ownership added to context menu successfully."
@@ -11845,8 +11901,8 @@ Windows Registry Editor Version 5.00
             throw "reg.exe import failed with exit code $($process.ExitCode)."
         }
     } finally {
-        if (Test-Path $tempReg) {
-            Remove-Item -Path $tempReg -Force -ErrorAction SilentlyContinue
+        if ($isTemp -and (Test-Path $regFileToImport)) {
+            Remove-Item -Path $regFileToImport -Force -ErrorAction SilentlyContinue
         }
     }
 }
@@ -11870,10 +11926,29 @@ Windows Registry Editor Version 5.00
 [-HKEY_CLASSES_ROOT\Drive\shell\runas]
 "@
 
-    $tempReg = Join-Path ([System.IO.Path]::GetTempPath()) "winutil_take_ownership_rem_$([guid]::NewGuid().ToString('N')).reg"
+    $candidates = @()
+    if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+        $candidates += Join-Path $PSScriptRoot "..\..\scripts\take-ownership\Remove_Take_Ownership_from_context_menu.reg"
+        $candidates += Join-Path $PSScriptRoot "scripts\take-ownership\Remove_Take_Ownership_from_context_menu.reg"
+    }
+    $currPath = (Get-Location).Path
+    if (-not [string]::IsNullOrWhiteSpace($currPath)) {
+        $candidates += Join-Path $currPath "scripts\take-ownership\Remove_Take_Ownership_from_context_menu.reg"
+    }
+
+    $localReg = $candidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and (Test-Path $_) } | Select-Object -First 1
+
+    $isTemp = $false
+    if ($localReg) {
+        $regFileToImport = $localReg
+    } else {
+        $regFileToImport = Join-Path ([System.IO.Path]::GetTempPath()) "winutil_max_take_ownership_rem_$([guid]::NewGuid().ToString('N')).reg"
+        [System.IO.File]::WriteAllText($regFileToImport, $regContent, [System.Text.Encoding]::Unicode)
+        $isTemp = $true
+    }
+
     try {
-        [System.IO.File]::WriteAllText($tempReg, $regContent, [System.Text.Encoding]::Unicode)
-        $process = Start-Process -FilePath "reg.exe" -ArgumentList "import `"$tempReg`"" -Wait -PassThru -NoNewWindow
+        $process = Start-Process -FilePath "reg.exe" -ArgumentList "import `"$regFileToImport`"" -Wait -PassThru -NoNewWindow
         if ($process.ExitCode -eq 0) {
             Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] [SUCCESS] 'Take Full Ownership' removed from right-click context menu." -ForegroundColor Green
             Write-WinUtilLog -Component "TakeOwnership" -Message "Take Full Ownership removed from context menu successfully."
@@ -11881,8 +11956,8 @@ Windows Registry Editor Version 5.00
             throw "reg.exe import failed with exit code $($process.ExitCode)."
         }
     } finally {
-        if (Test-Path $tempReg) {
-            Remove-Item -Path $tempReg -Force -ErrorAction SilentlyContinue
+        if ($isTemp -and (Test-Path $regFileToImport)) {
+            Remove-Item -Path $regFileToImport -Force -ErrorAction SilentlyContinue
         }
     }
 }
@@ -15401,7 +15476,16 @@ $sync.configs.applications = @'
                                 "link":  "https://www.wps.com/",
                                 "winget":  "Kingsoft.WPSOffice",
                                 "foss":  false
-                            }
+                            },
+    "WPFInstallidm":  {
+                          "category":  "Utilities",
+                          "choco":  "internetdownloadmanager",
+                          "content":  "Internet Download Manager",
+                          "description":  "Internet Download Manager (IDM) is a popular tool to increase download speeds by up to 5 times, resume and schedule downloads.",
+                          "link":  "https://www.internetdownloadmanager.com/",
+                          "winget":  "Tonec.InternetDownloadManager",
+                          "foss":  false
+                      }
 }
 '@ | ConvertFrom-Json
 $sync.configs.appnavigation = @'
@@ -15850,39 +15934,6 @@ $sync.configs.feature = @'
                             "function":  "Invoke-WPFFixesNTPPool",
                             "link":  "https://winutil.christitus.com/code-reference/features/fixes/ntppool"
                         },
-    "WPFFixesSmartBulkRename":  {
-                                    "Content":  "[MAX] Smart Bulk Name Modifier",
-                                    "Description":  "Advanced bulk file and folder renamer with live preview, text replace, remove, prefix/suffix, numbering, case transformation, regex support, and automated permission resolution.",
-                                    "category":  "Fixes",
-                                    "panel":  "1",
-                                    "Type":  "Button",
-                                    "ButtonWidth":  "300",
-                                    "Highlight":  true,
-                                    "function":  "Invoke-WPFSmartBulkRename",
-                                    "link":  "https://github.com/R-Rinku/winutil-max"
-                                },
-    "WPFTakeOwnershipAdd":  {
-                                "Content":  "[MAX] Take Ownership - Add Context Menu",
-                                "Description":  "Adds \u0027Take Ownership\u0027 with UAC shield to right-click context menu for files, folders, and non-system drives with built-in protection against modifying core Windows system directories.",
-                                "category":  "Fixes",
-                                "panel":  "1",
-                                "Type":  "Button",
-                                "ButtonWidth":  "300",
-                                "Highlight":  true,
-                                "function":  "Invoke-WPFTakeOwnershipAdd",
-                                "link":  "https://www.rinkurapria.dev/blog/take-full-ownership-windows.html"
-                            },
-    "WPFTakeOwnershipRemove":  {
-                                   "Content":  "[MAX] Take Ownership - Remove Context Menu",
-                                   "Description":  "Removes the \u0027Take Ownership\u0027 entries from right-click context menus for files, folders, and drives.",
-                                   "category":  "Fixes",
-                                   "panel":  "1",
-                                   "Type":  "Button",
-                                   "ButtonWidth":  "300",
-                                   "Highlight":  true,
-                                   "function":  "Invoke-WPFTakeOwnershipRemove",
-                                   "link":  "https://www.rinkurapria.dev/blog/take-full-ownership-windows.html"
-                               },
     "WPFFeatureshyperv":  {
                               "Content":  "Hyper-V - Enable",
                               "Description":  "Hyper-V is a hardware virtualization product developed by Microsoft that allows users to create and manage virtual machines.",
@@ -16226,6 +16277,80 @@ $sync.configs.feature = @'
                                 "function":  "Invoke-WPFSSHServer",
                                 "link":  "https://winutil.christitus.com/code-reference/features/remote-access/sshserver"
                             }
+}
+'@ | ConvertFrom-Json
+$sync.configs.max = @'
+{
+    "WPFMaxSmartBulkRename":  {
+                                  "Content":  "Smart Bulk Name Modifier",
+                                  "Description":  "Interactive batch file and folder renamer with real-time preview, regular expressions, and sequence numbering.",
+                                  "category":  "Power Utilities",
+                                  "panel":  "0",
+                                  "Type":  "Button",
+                                  "ButtonWidth":  "300",
+                                  "function":  "Invoke-WPFSmartBulkRename",
+                                  "link":  "https://github.com/R-Rinku/winutil-max"
+                              },
+    "WPFMaxTakeOwnershipAdd":  {
+                                   "Content":  "Take Ownership - Add to Context Menu",
+                                   "Description":  "Adds \u0027Take Full Ownership\u0027 to Windows Explorer context menu with critical OS root safeguards.",
+                                   "category":  "Power Utilities",
+                                   "panel":  "0",
+                                   "Type":  "Button",
+                                   "ButtonWidth":  "300",
+                                   "function":  "Invoke-WPFTakeOwnershipAdd",
+                                   "link":  "https://www.rinkurapria.dev/blog/take-full-ownership-windows.html"
+                               },
+    "WPFMaxTakeOwnershipRemove":  {
+                                      "Content":  "Take Ownership - Remove from Context Menu",
+                                      "Description":  "Removes \u0027Take Full Ownership\u0027 context menu entries from Windows Explorer.",
+                                      "category":  "Power Utilities",
+                                      "panel":  "0",
+                                      "Type":  "Button",
+                                      "ButtonWidth":  "300",
+                                      "function":  "Invoke-WPFTakeOwnershipRemove",
+                                      "link":  "https://www.rinkurapria.dev/blog/take-full-ownership-windows.html"
+                                  },
+    "WPFMaxSuperGodMode":  {
+                               "Content":  "Windows Super God Mode",
+                               "Description":  "Launches ThioJoe\u0027s Windows Super God Mode to create shortcuts to all special shell folders, deep links, and Windows settings.",
+                               "category":  "Power Utilities",
+                               "panel":  "0",
+                               "Type":  "Button",
+                               "ButtonWidth":  "300",
+                               "function":  "Invoke-WinUtilSuperGodMode",
+                               "link":  "https://github.com/ThioJoe/Windows-Super-God-Mode"
+                           },
+    "WPFMaxBitLockerPolicy":  {
+                                  "Content":  "BitLocker Startup PIN Policy - Enable",
+                                  "Description":  "Enables Group Policy to allow BitLocker pre-boot Startup PIN on TPM-enabled machines and devices without TPM.",
+                                  "category":  "Security",
+                                  "panel":  "1",
+                                  "Type":  "Button",
+                                  "ButtonWidth":  "300",
+                                  "function":  "Invoke-WinUtilBitLockerPolicy",
+                                  "link":  "https://learn.microsoft.com/windows/security/operating-system-security/data-protection/bitlocker/"
+                              },
+    "WPFMaxInstallClaude":  {
+                                "Content":  "Claude Code CLI - Install / Launch",
+                                "Description":  "Installs or launches Anthropic\u0027s Claude Code terminal coding agent (@anthropic-ai/claude-code via npm).",
+                                "category":  "AI \u0026 Developer Toolkits",
+                                "panel":  "1",
+                                "Type":  "Button",
+                                "ButtonWidth":  "300",
+                                "function":  "Invoke-WinUtilInstallClaudeCLI",
+                                "link":  "https://docs.anthropic.com/en/docs/agents-and-tools/claude-code"
+                            },
+    "WPFMaxInstallOmniRoute":  {
+                                   "Content":  "OmniRoute AI Gateway - Install / Launch",
+                                   "Description":  "Installs or launches OmniRoute local AI model router, proxy, and failover gateway.",
+                                   "category":  "AI \u0026 Developer Toolkits",
+                                   "panel":  "1",
+                                   "Type":  "Button",
+                                   "ButtonWidth":  "300",
+                                   "function":  "Invoke-WinUtilInstallOmniRoute",
+                                   "link":  "https://github.com/dgl1231/omniroute"
+                               }
 }
 '@ | ConvertFrom-Json
 $sync.configs.preset = @'
@@ -18119,11 +18244,11 @@ $inputXML = @'
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
         WindowStyle="SingleBorderWindow"
-        Width="1180"
-        Height="760"
-        MinWidth="800"
-        MinHeight="550"
-        Title="winutil-MAX - Running Up That Hill">
+        Width="1200"
+        Height="640"
+        MinWidth="850"
+        MinHeight="520"
+        Title="WinUtil-Max">
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="30" CornerRadius="10" UseAeroCaptionButtons="False" ResizeBorderThickness="6"/>
     </WindowChrome.WindowChrome>
@@ -19355,7 +19480,6 @@ $inputXML = @'
                             <Separator/>
                             <MenuItem FontSize="{DynamicResource ButtonFontSize}" Header="About" Name="AboutMenuItem" Foreground="{DynamicResource MainForegroundColor}"/>
                             <MenuItem FontSize="{DynamicResource ButtonFontSize}" Header="Documentation" Name="DocumentationMenuItem" Foreground="{DynamicResource MainForegroundColor}"/>
-                            <MenuItem FontSize="{DynamicResource ButtonFontSize}" Header="Sponsors" Name="SponsorMenuItem" Foreground="{DynamicResource MainForegroundColor}"/>
                         </StackPanel>
                     </Border>
                 </Popup>
@@ -19488,6 +19612,14 @@ $inputXML = @'
                     <ToggleButton.Content>
                         <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonWin11ISOForegroundColor}">
                             <Underline>W</Underline>in11 Creator
+                        </TextBlock>
+                    </ToggleButton.Content>
+                </ToggleButton>
+                <ToggleButton Style="{StaticResource TabToggleButton}" Margin="0,0,5,0" Height="{DynamicResource TabButtonHeight}" Width="Auto" MinWidth="{DynamicResource TabButtonWidth}"
+                    Background="{DynamicResource ButtonConfigBackgroundColor}" Foreground="{DynamicResource ButtonConfigForegroundColor}" FontWeight="Bold" Name="WPFTab7BT">
+                    <ToggleButton.Content>
+                        <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonConfigForegroundColor}">
+                            <Underline>M</Underline>AX
                         </TextBlock>
                     </ToggleButton.Content>
                 </ToggleButton>
@@ -20425,6 +20557,12 @@ $inputXML = @'
                     </Border>
                 </Grid>
             </TabItem>
+            <TabItem Header="MAX" Visibility="Collapsed" Name="WPFTab7">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="{DynamicResource TabContentMargin}">
+                    <Grid Name="maxpanel" Grid.Row="1" Background="Transparent">
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
         </TabControl>
 
         <!-- Window-level progress indicator - visible regardless of active tab -->
@@ -20444,60 +20582,6 @@ $inputXML = @'
 
 
 
-        <!-- Vecna Exit and Completion Modal Overlay -->
-        <Grid Name="WPFVecnaOverlay" Grid.Row="0" Grid.RowSpan="6" Background="#F208080C" Panel.ZIndex="1001" Visibility="Collapsed">
-            <Border HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Background="#16080A" BorderBrush="#FF1824" BorderThickness="2" CornerRadius="12"
-                    MaxWidth="640" Margin="20" Padding="18">
-                <Border.Effect>
-                    <DropShadowEffect Color="#FF1824" BlurRadius="30" ShadowDepth="0" Opacity="0.95"/>
-                </Border.Effect>
-                <StackPanel HorizontalAlignment="Center">
-                    <!-- Glowing Red Header -->
-                    <TextBlock Name="WPFVecnaHeader"
-                               Text="VECNA IS WATCHING..."
-                               FontFamily="Century Gothic, Segoe UI"
-                               FontWeight="Black"
-                               FontSize="22"
-                               Foreground="#FF2A3A"
-                               HorizontalAlignment="Center"
-                               Margin="0,0,0,12">
-                        <TextBlock.Effect>
-                            <DropShadowEffect Color="#FF1824" BlurRadius="12" ShadowDepth="0" Opacity="0.9"/>
-                        </TextBlock.Effect>
-                    </TextBlock>
-
-                    <!-- Vecna Image with rounded corners and glowing shadow -->
-                    <Border CornerRadius="8" ClipToBounds="True" MaxWidth="580" MaxHeight="320" Margin="0,0,0,14" BorderBrush="#44FF1824" BorderThickness="1">
-                        <Image Name="WPFVecnaImage" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-
-                    <!-- Message text -->
-                    <TextBlock Name="WPFVecnaMessage"
-                               Text="You cannot escape the Upside Down... Closing WinUtil."
-                               FontFamily="Segoe UI"
-                               FontSize="13"
-                               Foreground="#FFEEEEEE"
-                               HorizontalAlignment="Center"
-                               TextWrapping="Wrap"
-                               TextAlignment="Center"
-                               Margin="0,0,0,14"/>
-
-                    <!-- Action buttons -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button Name="WPFVecnaDismissButton"
-                                Content="Close Now"
-                                Style="{StaticResource HoverButtonStyle}"
-                                Background="#33FF1824"
-                                Foreground="#FF2A3A"
-                                FontWeight="Bold"
-                                FontSize="13"
-                                Padding="16,6"
-                                Margin="6,0,6,0"/>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-        </Grid>
     </Grid>
 </Window>
 
@@ -21040,8 +21124,15 @@ if ($host.UI.RawUI) {
 
 $sync.configs.applicationsHashtable = @{}
 $sync.configs.applications.PSObject.Properties | ForEach-Object {
-    $sync.configs.applicationsHashtable[$_.Name] = $_.Value
-    $sync.configs.applicationsHashtable["WPFInstall$($_.Name)"] = $_.Value
+    $name = $_.Name
+    if ($name.StartsWith("WPFInstall")) {
+        $rawName = $name.Substring(10)
+        $sync.configs.applicationsHashtable[$rawName] = $_.Value
+        $sync.configs.applicationsHashtable[$name] = $_.Value
+    } else {
+        $sync.configs.applicationsHashtable[$name] = $_.Value
+        $sync.configs.applicationsHashtable["WPFInstall$name"] = $_.Value
+    }
 }
 
 $sync.configs.appxHashtable = @{}

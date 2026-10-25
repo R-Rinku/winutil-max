@@ -242,7 +242,7 @@ $sync.selectedFeatures = [System.Collections.Generic.List[string]]::new()
 $sync.currentTab = "Install"
 
 $dateTime = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
-$winutildir = "$env:LocalAppData\winutil"
+$winutildir = "$env:LocalAppData\winutil-max"
 $sync.winutildir = $winutildir
 
 $logdir = "$winutildir\logs"
@@ -252,9 +252,9 @@ if (-not (Test-Path $logdir)) {
 }
 # Keep console output and structured entries in the path reported to the user. Write-WinUtilLog
 # writes through the host while this transcript owns the file, avoiding competing file handles.
-$sync.logPath = "$logdir\winutil_$dateTime.log"
+$sync.logPath = "$logdir\winutil_max_$dateTime.log"
 $sync.transcriptPath = $sync.logPath
 Start-Transcript -Path $sync.transcriptPath -Append -NoClobber | Out-Null
 
-$Host.UI.RawUI.WindowTitle = "WinUtil"
+$Host.UI.RawUI.WindowTitle = "WinUtil-Max"
 Clear-Host

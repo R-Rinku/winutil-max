@@ -54,15 +54,12 @@ irm https://raw.githubusercontent.com/R-Rinku/winutil-max/main/winutil.ps1 | iex
   * Deep charcoal void (`#111116`) paired with neon synthwave magenta (`#FF007F`) borders, glowing highlights, and retro accents.
   * Streamlined launch: opens directly inside your active console window with only 1 main GUI window (no duplicate terminal popups).
 
-* **🏷️ [MAX] Smart Bulk Name Modifier** *(under Config tab)*:
-  * Interactive bulk file & folder renaming utility with instant before-and-after live preview.
-  * Real-time search & replace, Regular Expressions (Regex), case transformation (UPPERCASE, lowercase, Title Case), sequence numbering with custom padding, and prefix/suffix insertions.
-  * Automatically handles elevation permissions to rename restricted folder items.
-
-* **🔑 [MAX] Take Full Ownership** *(under Config tab)*:
-  * One-click integration to add or remove *"Take Full Ownership"* in the Windows Explorer context menu.
-  * Automatically grants administrators full permission via `takeown` and `icacls`.
-  * Built-in safeguards preventing accidental execution on critical OS root directories.
+* **🚀 MAX Tab**:
+  * **🏷️ Smart Bulk Name Modifier**: Interactive bulk file & folder renaming utility with instant before-and-after live preview, regex, and numbering.
+  * **🔑 Take Full Ownership**: One-click integration to add or remove *"Take Full Ownership"* in the Explorer context menu with system directory safeguards (scripts organized in `scripts/take-ownership/`).
+  * **🔒 BitLocker with Startup PIN**: Enable Startup PIN Group Policies for TPM & non-TPM machines, interactive PIN setup, and drive encryption status inspector.
+  * **🤖 AI & Developer Toolkits**: 1-click install & launcher for Claude Code CLI and OmniRoute AI Gateway.
+  * **⚡ MAX Turbo & Maintenance**: Quick DNS/RAM/Temp clean, Windows God Mode desktop tool, Ultimate Performance power plan, and DISM/SFC system repair.
 
 * **🛡️ Enterprise Mode Safety Preset**:
   * Dedicated enterprise profile locking down risky tweaks (blocks bulk AppX removal, prevents Windows Update service tampering, and safeguards system components).

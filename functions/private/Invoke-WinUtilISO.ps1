@@ -329,7 +329,7 @@ function Invoke-WinUtilISOModify {
     $selectedEditionName = if ($selectedItem) { ($selectedItem -replace '^\d+:\s*', '') } else { "Unknown" }
 
     # A fresh working directory per run; existing-work detection is only for resuming an export
-    $workDir = Join-Path $env:TEMP "WinUtil_Win11ISO_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+    $workDir = Join-Path $env:TEMP "WinUtil-Max_Win11ISO_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
     if (Test-Path $workDir) {
         $workDir = "$($workDir)_$(([guid]::NewGuid()).ToString('N').Substring(0, 8))"
     }
@@ -337,8 +337,8 @@ function Invoke-WinUtilISOModify {
     $autounattendContent = if ($WinUtilAutounattendXml) {
         $WinUtilAutounattendXml
     } else {
-        $toolsXml = Join-Path $PSScriptRoot "..\..\tools\autounattend.xml"
-        if (Test-Path $toolsXml) { Get-Content $toolsXml -Raw } else { "" }
+        $toolsXml = if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) { Join-Path $PSScriptRoot "..\..\tools\autounattend.xml" } else { "" }
+        if (-not [string]::IsNullOrWhiteSpace($toolsXml) -and (Test-Path $toolsXml)) { Get-Content $toolsXml -Raw } else { "" }
     }
 
     Start-WinUtilJob -Name "ISO modify" -Description "Modifying ISO" -Parameters @{
@@ -486,7 +486,7 @@ function Invoke-WinUtilISOCheckExistingWork {
     }
     $sync["Win11ISOExistingWorkRetryPending"] = $false
 
-    $existingWorkDir = Get-Item -Path (Join-Path $env:TEMP "WinUtil_Win11ISO*") |
+    $existingWorkDir = Get-Item -Path @((Join-Path $env:TEMP "WinUtil-Max_Win11ISO*"), (Join-Path $env:TEMP "WinUtil_Win11ISO*")) -ErrorAction SilentlyContinue |
         Where-Object { $_.PSIsContainer } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
     if (-not $existingWorkDir) { return }
