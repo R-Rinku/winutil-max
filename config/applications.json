@@ -2146,6 +2146,15 @@
         "link": "https://www.wps.com/",
         "winget": "Kingsoft.WPSOffice",
         "foss": false
+    },
+    "idm": {
+        "category": "Utilities",
+        "choco": "internetdownloadmanager",
+        "content": "Internet Download Manager",
+        "description": "Internet Download Manager (IDM) is a popular tool to increase download speeds by up to 5 times, resume and schedule downloads.",
+        "link": "https://www.internetdownloadmanager.com/",
+        "winget": "Tonec.InternetDownloadManager",
+        "foss": false
     }
 }
 

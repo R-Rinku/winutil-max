@@ -23,11 +23,14 @@ function Initialize-InstallCategoryAppList {
         # costs about seventy times as much per app.
         foreach ($appKey in $Apps.Keys) {
             if (-not $appKey.StartsWith("WPFInstall")) { continue }
+            if ($appKey.StartsWith("WPFInstallWPFInstall")) { continue }
             $category = $Apps[$appKey].Category
             if (-not $appsByCategory.ContainsKey($category)) {
                 $appsByCategory[$category] = [System.Collections.Generic.List[string]]::new()
             }
-            $appsByCategory[$category].Add($appKey)
+            if (-not $appsByCategory[$category].Contains($appKey)) {
+                $appsByCategory[$category].Add($appKey)
+            }
         }
         $sync.InstallAppRenderQueue = [System.Collections.Queue]::new()
 
