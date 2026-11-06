@@ -422,6 +422,9 @@ function Invoke-WPFUIElements {
                         $button.HorizontalAlignment = "Left"
                         $button.SetResourceReference([Windows.Controls.Control]::MarginProperty, "ButtonMargin")
                         $button.SetResourceReference([Windows.Controls.Control]::FontSizeProperty, "ButtonFontSize")
+                        if ($entryInfo.Description) {
+                            $button.ToolTip = $entryInfo.Description
+                        }
                         if ($entryInfo.ButtonWidth) {
                             $button.Width = [int]$entryInfo.ButtonWidth
                         }
@@ -429,7 +432,36 @@ function Invoke-WPFUIElements {
                             $button.FontWeight = [Windows.FontWeights]::SemiBold
                         }
                         [System.Windows.Automation.AutomationProperties]::SetName($button, $entryInfo.Content)
-                        $stackPanelContainer.Children.Add($button) | Out-Null
+
+                        if ($entryInfo.Link -or $entryInfo.Description) {
+                            $horizontalStackPanel = New-Object Windows.Controls.StackPanel
+                            $horizontalStackPanel.Orientation = "Horizontal"
+                            $horizontalStackPanel.Children.Add($button) | Out-Null
+
+                            $textBlock = New-Object Windows.Controls.TextBlock
+                            $textBlock.Name = $button.Name + "Link"
+                            $textBlock.Text = "(?)"
+                            $textBlock.ToolTip = if ($entryInfo.Description) { $entryInfo.Description } else { $entryInfo.Link }
+                            $textBlock.Style = $HoverTextBlockStyle
+                            $textBlock.UseLayoutRounding = $true
+                            $textBlock.VerticalAlignment = "Center"
+                            $textBlock.Margin = New-Object Windows.Thickness(6, 0, 0, 0)
+                            $textBlock.SetResourceReference([Windows.Controls.Control]::FontSizeProperty, "ButtonFontSize")
+                            $textBlock.Cursor = [System.Windows.Input.Cursors]::Hand
+
+                            if ($entryInfo.Link) {
+                                $targetLink = $entryInfo.Link
+                                $textBlock.Add_MouseUp({
+                                    Start-Process $targetLink -ErrorAction SilentlyContinue
+                                })
+                            }
+
+                            $horizontalStackPanel.Children.Add($textBlock) | Out-Null
+                            $stackPanelContainer.Children.Add($horizontalStackPanel) | Out-Null
+                            $sync[$textBlock.Name] = $textBlock
+                        } else {
+                            $stackPanelContainer.Children.Add($button) | Out-Null
+                        }
 
                         $sync[$entryInfo.Name] = $button
 

@@ -257,6 +257,7 @@ function Invoke-WPFButtonAction {
         }
         "WPFselectedAppsButton" {$sync.selectedAppsPopup.IsOpen = -not $sync.selectedAppsPopup.IsOpen}
         "WPFMaxSmartBulkRename" { Invoke-WPFSmartBulkRename }
+        "WPFMaxOneDriveExclusion" { Invoke-WPFOneDriveExclusion }
         "WPFMaxTakeOwnershipAdd" { Invoke-WPFTakeOwnershipAdd }
         "WPFMaxTakeOwnershipRemove" { Invoke-WPFTakeOwnershipRemove }
         "WPFMaxSuperGodMode" { Invoke-WinUtilSuperGodMode }

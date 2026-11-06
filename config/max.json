@@ -9,6 +9,16 @@
     "function": "Invoke-WPFSmartBulkRename",
     "link": "https://github.com/R-Rinku/winutil-max"
   },
+  "WPFMaxOneDriveExclusion": {
+    "Content": "OneDrive Sync Exclusion Manager",
+    "Description": "Stops OneDrive from syncing selected folders (like WindowsPowerShell or node_modules) or files, keeping them local on your PC.",
+    "category": "Power Utilities",
+    "panel": "0",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "function": "Invoke-WPFOneDriveExclusion",
+    "link": "https://learn.microsoft.com/onedrive"
+  },
   "WPFMaxTakeOwnershipAdd": {
     "Content": "Take Ownership - Add to Context Menu",
     "Description": "Adds 'Take Full Ownership' to Windows Explorer context menu with critical OS root safeguards.",
