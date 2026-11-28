@@ -7,7 +7,7 @@
 #### **Run the latest pre-release**
 
 ```ps1
-irm https://christitus.com/windev | iex
+irm https://rinkurapria.dev/windev | iex
 ```
 
 > [!CAUTION]
@@ -66,7 +66,7 @@ graph TD
 > This is a diagram to guide you through the process. It may vary depending on the type of change you're making.
 
 ### Fork the Repo
-* Fork the WinUtil Repository [here](https://github.com/ChrisTitusTech/winutil) to create a copy that will be available in your repository list.
+* Fork the Winutil-MAX Repository [here](https://github.com/R-Rinku/winutil-max) to create a copy that will be available in your repository list.
 
 ![Fork Image](/docs/src/assets/contributing/Fork-Button-Dark.png)
 

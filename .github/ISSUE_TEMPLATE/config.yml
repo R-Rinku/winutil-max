@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-    - name: 💻 Community Discord
-      url: https://discord.gg/RUbZUZyByQ
-      about: Join our Community Discord server to chat with other users in the WinUtil community.
+    - name: 📖 Documentation
+      url: https://winutil.rinkurapria.dev/
+      about: Read the Winutil-MAX documentation, guides, and FAQ.
     - name: Suggest an application
-      url: https://github.com/ChrisTitusTech/winutil/discussions/new?category=app-suggestion
+      url: https://github.com/R-Rinku/winutil-max/discussions/new?category=app-suggestion
       about: If you want to suggest an application to be added, create a discussion with given template

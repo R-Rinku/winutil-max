@@ -1,7 +1,5 @@
 # Security Policy
 
-If you find a security issue, please post it in the Issues tab. If you think it should be private, you can email me at contact@christitus.com.
+If you find a security issue, please post it in the [Issues tab](https://github.com/R-Rinku/winutil-max/issues). If you think it should be private, you can email me directly at **Contact@rinkurapria.dev**.
 
-For immediate response check out our Discord server:
-
-[![](https://dcbadge.limes.pink/api/server/https://discord.gg/RUbZUZyByQ?theme=default-inverted&style=for-the-badge)](https://discord.gg/RUbZUZyByQ)
+For documentation and project details, visit [winutil.rinkurapria.dev](https://winutil.rinkurapria.dev/).

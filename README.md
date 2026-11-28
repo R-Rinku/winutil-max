@@ -48,6 +48,14 @@ irm rinkurapria.dev/win | iex
 irm https://raw.githubusercontent.com/R-Rinku/winutil-max/main/winutil.ps1 | iex
 ```
 
+*(Dev / Pre-Release Channel)*:
+```powershell
+irm rinkurapria.dev/windev | iex
+```
+```powershell
+irm https://raw.githubusercontent.com/R-Rinku/winutil-max/refs/heads/main/windev.ps1 | iex
+```
+
 ---
 
 ## ✨ What's New in winutil-MAX
@@ -115,14 +123,6 @@ cd winutil-max
 | **AI Toolkit** | Developer Tools | Anthropic Claude Code terminal assistant, OmniRoute AI router gateway, one-click launcher. |
 | **Windows Debloat & Privacy**| Performance & Tweaks | Disable telemetry, Cortana, Recall, Edge background processes, OneDrive uninstall, Windows Search indexing toggle. |
 | **Ultimate Performance Plan**| Gaming & Latency | Unlock hidden Windows Ultimate Performance power profile for low input latency and maximum CPU responsiveness. |
-
----
-
-## ⚠️ Disclaimer & Dual-Boot BitLocker Warning
-
-Provided **as-is** without warranty. Review changes before applying them. Use Enterprise Mode when operating on production machines.
-
-> **BitLocker Recovery Key Warning:** Before enabling or modifying BitLocker policies (especially on **dual-boot** systems), always back up your BitLocker Recovery Key for **both** OS drives/devices (`manage-bde -protectors -get C:`) to prevent drive lockouts.
 
 ---
 

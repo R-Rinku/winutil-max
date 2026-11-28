@@ -38,6 +38,79 @@ const year = new Date().getFullYear();
 	</div>
 </footer>
 
+<div id="wu-af-notice" class="wu-af-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="wu-af-title">
+	<div class="wu-af-modal">
+		<div class="wu-af-modal-head">
+			<span id="wu-af-title" class="wu-af-badge">Identity &amp; Equal Rights</span>
+			<button type="button" id="wu-af-close" class="wu-af-close" aria-label="Dismiss notice">&times;</button>
+		</div>
+		<p class="wu-af-text">
+			A woman is not a &ldquo;Bibi,&rdquo; a shadow, or property&mdash;she is a human being with her own name. This platform stands unapologetically for equal rights and identity.
+		</p>
+		<div class="wu-af-actions">
+			<button type="button" id="wu-af-continue" class="wu-af-btn">Continue to Site</button>
+		</div>
+	</div>
+</div>
+
+<script is:inline data-cfasync="false">
+	(function initAfNotice() {
+		var overlay = document.getElementById('wu-af-notice');
+		var closeBtn = document.getElementById('wu-af-close');
+		var continueBtn = document.getElementById('wu-af-continue');
+		if (!overlay) return;
+
+		if (sessionStorage.getItem('wu_af_dismissed') === '1') return;
+
+		function dismiss() {
+			overlay.hidden = true;
+			sessionStorage.setItem('wu_af_dismissed', '1');
+		}
+
+		if (closeBtn) closeBtn.addEventListener('click', dismiss);
+		if (continueBtn) continueBtn.addEventListener('click', dismiss);
+		overlay.addEventListener('click', function (e) {
+			if (e.target === overlay) dismiss();
+		});
+		document.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape' && !overlay.hidden) dismiss();
+		});
+
+		function showIfAf(code) {
+			if (code && code.toUpperCase() === 'AF') {
+				overlay.hidden = false;
+			}
+		}
+
+		fetch('/cdn-cgi/trace', { cache: 'no-store' })
+			.then(function (res) { return res.ok ? res.text() : ''; })
+			.then(function (txt) {
+				var match = txt.match(/^loc=([A-Z]{2})/m);
+				if (match && match[1]) {
+					showIfAf(match[1]);
+					return;
+				}
+				return fetch('https://api.country.is/', { cache: 'no-store' })
+					.then(function (res) { return res.ok ? res.json() : null; })
+					.then(function (data) {
+						if (data && typeof data.country === 'string') {
+							showIfAf(data.country);
+						}
+					});
+			})
+			.catch(function () {
+				fetch('https://api.country.is/', { cache: 'no-store' })
+					.then(function (res) { return res.ok ? res.json() : null; })
+					.then(function (data) {
+						if (data && typeof data.country === 'string') {
+							showIfAf(data.country);
+						}
+					})
+					.catch(function () {});
+			});
+	})();
+</script>
+
 <style>
 	@layer starlight.core {
 		footer {
@@ -103,5 +176,101 @@ const year = new Date().getFullYear();
 	}
 	.site-footer-copyright a:hover {
 		color: var(--color-lavender-spark, #b997ff);
+	}
+
+	.wu-af-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1.25rem;
+		background: rgba(14, 10, 20, 0.72);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+	}
+	.wu-af-overlay[hidden] {
+		display: none !important;
+	}
+	.wu-af-modal {
+		width: 100%;
+		max-width: 520px;
+		padding: 1.5rem 1.75rem;
+		border-radius: 20px;
+		background: linear-gradient(180deg, rgba(45, 39, 52, 0.58) 0%, rgba(28, 22, 36, 0.68) 100%);
+		backdrop-filter: blur(18px) saturate(140%);
+		-webkit-backdrop-filter: blur(18px) saturate(140%);
+		border: 1px solid rgba(185, 151, 255, 0.42);
+		box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65), 0 0 40px rgba(185, 151, 255, 0.16);
+		color: var(--color-bone-white, #f1f0ec);
+		animation: wu-af-pop 0.22s ease-out;
+	}
+	@keyframes wu-af-pop {
+		from {
+			opacity: 0;
+			transform: scale(0.96) translateY(8px);
+		}
+		to {
+			opacity: 1;
+			transform: scale(1) translateY(0);
+		}
+	}
+	.wu-af-modal-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 0.9rem;
+	}
+	.wu-af-badge {
+		display: inline-block;
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--color-lavender-spark, #b997ff);
+		background: rgba(185, 151, 255, 0.14);
+		border: 1px solid rgba(185, 151, 255, 0.35);
+		padding: 0.25rem 0.65rem;
+		border-radius: 999px;
+	}
+	.wu-af-text {
+		margin: 0;
+		font-size: 1.02rem;
+		line-height: 1.6;
+		color: var(--color-bone-white, #f1f0ec);
+	}
+	.wu-af-actions {
+		display: flex;
+		justify-content: flex-end;
+		margin-top: 1.25rem;
+	}
+	.wu-af-btn {
+		background: var(--color-lavender-spark, #b997ff);
+		color: #16111d;
+		border: none;
+		border-radius: 10px;
+		padding: 0.55rem 1.15rem;
+		font-size: 0.875rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition: transform 0.12s ease, filter 0.15s ease;
+	}
+	.wu-af-btn:hover {
+		filter: brightness(1.08);
+		transform: translateY(-1px);
+	}
+	.wu-af-close {
+		background: transparent;
+		border: none;
+		color: var(--color-mid-ash, #a5a2a5);
+		font-size: 1.4rem;
+		line-height: 1;
+		cursor: pointer;
+		padding: 0.15rem 0.4rem;
+		flex-shrink: 0;
+	}
+	.wu-af-close:hover {
+		color: var(--color-bone-white, #f1f0ec);
 	}
 </style>

@@ -1,6 +1,6 @@
 ---
 title: Winutil-MAX
-description: Open-source Windows setup, optimization & tweaking utility. Install apps via WinGet/Chocolatey, debloat Windows, enable dual-boot BitLocker without TPM, exclude OneDrive sync, and build custom ISOs.
+description: Open-source Windows setup, optimization & tweaking utility (Stranger Things / Max Mayfield Edition). Install apps via WinGet/Chocolatey, debloat Windows, enable dual-boot BitLocker without TPM, exclude OneDrive sync, and build custom ISOs.
 template: splash
 editUrl: false
 heroEyebrow: Winutil-MAX • v2.0
@@ -33,7 +33,7 @@ head:
   - tag: meta
     attrs:
       name: keywords
-      content: winutil-max, windows optimization, debloat windows 11, winget installer, bitlocker without tpm, onedrive exclude folder, powershell windows utility
+      content: winutil-max, max mayfield, stranger things winutil, windows optimization, debloat windows 11, winget installer, bitlocker without tpm, onedrive exclude folder, powershell windows utility
   - tag: script
     attrs:
       type: application/ld+json
@@ -151,6 +151,23 @@ import WorkspaceTabs from '../../components/WorkspaceTabs.astro';
 						<span class="wu-copy-label">Copy</span>
 					</button>
 				</div>
+			</div>
+		</div>
+
+		<div class="wu-bootstrap-card" style="margin-top: 1.25rem;">
+			<div class="wu-bootstrap-head">
+				<h3 class="wu-bootstrap-title">Dev / Pre-Release Channel</h3>
+				<span class="wu-bootstrap-tag">Testing</span>
+			</div>
+			<p class="wu-bootstrap-desc">Test the latest development build via <code>rinkurapria.dev/windev</code> or <a href="https://raw.githubusercontent.com/R-Rinku/winutil-max/refs/heads/main/windev.ps1" target="_blank" rel="noopener">GitHub raw <code>windev.ps1</code></a>.</p>
+			<div class="wu-cli-box">
+				<div class="wu-cli-cmd">
+					<span class="wu-cli-prompt">PS&gt;</span>
+					<code>irm "https://rinkurapria.dev/windev" | iex</code>
+				</div>
+				<button type="button" class="wu-cli-copy" data-copy-text='irm "https://rinkurapria.dev/windev" | iex' aria-label="Copy dev channel PowerShell command">
+					<span class="wu-copy-label">Copy</span>
+				</button>
 			</div>
 		</div>
 	</div>

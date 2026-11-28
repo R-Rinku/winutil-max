@@ -1,0 +1,24 @@
+# Winutil-MAX
+
+> Open-source Windows optimization, debloating, and automation suite — Stranger Things / Max Mayfield Edition.
+
+## Overview & Identity
+- **Project**: Winutil-MAX (`https://winutil.rinkurapria.dev`)
+- **Repository**: `https://github.com/R-Rinku/winutil-max`
+- **Maintainer**: Rinku Rapria (`https://www.rinkurapria.dev`)
+- **Theme & Naming**: **Winutil-MAX** is themed after **Max Mayfield** from *Stranger Things* ("Running Up That Hill"), featuring a Max Mayfield splash card, custom Max desktop shortcut icon, and a dark-mode aesthetic, paired with expanded ("maxed-out") Windows power-user utilities.
+- **Upstream Foundation**: Built on top of Chris Titus Tech's WinUtil (`https://github.com/ChrisTitusTech/winutil`).
+
+## Launch Commands (PowerShell Admin)
+- Primary: `irm "https://rinkurapria.dev/win" | iex`
+- GitHub Raw Fallback: `irm "https://raw.githubusercontent.com/R-Rinku/winutil-max/main/winutil.ps1" | iex`
+
+## Key Capabilities
+- **MAX Exclusive Tab**:
+  - **Dual-Boot BitLocker (No TPM)**: Enables pre-boot startup passwords without TPM PCR conflicts (always back up recovery keys for both OS drives first).
+  - **OneDrive Sync Exclusion Manager**: Excludes local folders (`node_modules`, `WindowsPowerShell`, etc.) from OneDrive sync.
+  - **Smart Bulk Name Modifier**: Batch file/folder renamer with regex and live preview.
+  - **Take Ownership**: Explorer context menu integration with OS root safeguards.
+  - **Winutil-MAX 2.0 Backups**: Full JSON profile export/import across apps, tweaks, BitLocker, and OneDrive exclusions.
+  - **Desktop Shortcut**: 1-click shortcut creator/remover using the Max Mayfield icon.
+- **Standard Workspaces**: Install (WinGet/Chocolatey), Tweaks (reversible privacy & performance), Config & Fixes, Updates, and Win11 Creator (custom debloated ISO + driver injection).
