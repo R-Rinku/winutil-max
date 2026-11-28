@@ -49,7 +49,7 @@ function Initialize-WinUtilTabContent {
                 }
             }
             "MAX" {
-                Invoke-WPFUIElements -configVariable $sync.configs.max -targetGridName "maxpanel" -columncount 2 -Yield:$Yield
+                Invoke-WPFUIElements -configVariable $sync.configs.max -targetGridName "maxpanel" -columncount 3 -Yield:$Yield
             }
         }
         # Controls built just now start unchecked, so anything already chosen by an import or a

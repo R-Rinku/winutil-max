@@ -94,7 +94,8 @@
     </Style>
     <Style x:Key="AppEntryCheckboxStyle" TargetType="CheckBox">
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="Margin" Value="{DynamicResource AppEntryMargin}"/>
         <Setter Property="Template">
@@ -102,7 +103,7 @@
                 <ControlTemplate TargetType="CheckBox">
                     <ContentPresenter Content="{TemplateBinding Content}"
                                       VerticalAlignment="Center"
-                                      HorizontalAlignment="Left"/>
+                                      HorizontalAlignment="Stretch"/>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -112,6 +113,7 @@
         <Setter Property="FontWeight" Value="Bold"/>
         <Setter Property="Foreground" Value="{DynamicResource MainForegroundColor}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         <Setter Property="Margin" Value="{DynamicResource AppEntryMargin}"/>
         <Setter Property="Background" Value="Transparent"/>
     </Style>
@@ -1384,7 +1386,7 @@
                 <ToggleButton Style="{StaticResource TabToggleButton}" Margin="0,0,5,0" Height="{DynamicResource TabButtonHeight}" Width="Auto" MinWidth="{DynamicResource TabButtonWidth}"
                     Background="{DynamicResource ButtonWin11ISOBackgroundColor}" Foreground="{DynamicResource ButtonWin11ISOForegroundColor}" FontWeight="Bold" Name="WPFTab5BT">
                     <ToggleButton.Content>
-                        <TextBlock FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonWin11ISOForegroundColor}">
+                        <TextBlock Margin="10,0,10,0" FontSize="{DynamicResource TabButtonFontSize}" Background="Transparent" Foreground="{DynamicResource ButtonWin11ISOForegroundColor}">
                             <Underline>W</Underline>in11 Creator
                         </TextBlock>
                     </ToggleButton.Content>
@@ -2333,7 +2335,34 @@
             </TabItem>
             <TabItem Header="MAX" Visibility="Collapsed" Name="WPFTab7">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="{DynamicResource TabContentMargin}">
-                    <Grid Name="maxpanel" Grid.Row="1" Background="Transparent">
+                    <Grid Background="Transparent">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Margin="10,8,10,12">
+                            <TextBlock Text="WinUtil-MAX Exclusive Utilities"
+                                       FontSize="24"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource MainForegroundColor}"/>
+                            <TextBlock Text="Power utilities, dual-boot BitLocker safeguards, and AI developer toolkits built exclusively for WinUtil-MAX. Hover over any button for details or click (?) for documentation."
+                                       Margin="0,6,0,0"
+                                       FontSize="13"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource MainForegroundColor}"/>
+                        </StackPanel>
+
+                        <Grid Name="maxpanel" Grid.Row="1" Background="Transparent">
+                        </Grid>
+
+                        <Border Grid.Row="2" Style="{StaticResource BorderStyle}" Margin="4,10,4,4" Padding="10">
+                            <TextBlock Text="Note: BitLocker Startup Password Policy prompts for recovery key backup confirmation before modifying Group Policy. AI toolkits install globally via npm and will install Node.js LTS via winget if missing."
+                                       TextWrapping="Wrap"
+                                       HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource MainForegroundColor}"/>
+                        </Border>
                     </Grid>
                 </ScrollViewer>
             </TabItem>

@@ -35,11 +35,17 @@ function Initialize-InstallAppEntry {
         $checkbox.Add_Checked($handlers.Checked)
         $checkbox.Add_Unchecked($handlers.Unchecked)
 
-        $contentPanel = New-Object Windows.Controls.StackPanel
-        $contentPanel.Orientation = "Horizontal"
+        $contentPanel = New-Object Windows.Controls.Grid
         $contentPanel.VerticalAlignment = [Windows.VerticalAlignment]::Center
+        $iconCol = New-Object Windows.Controls.ColumnDefinition
+        $iconCol.Width = [Windows.GridLength]::Auto
+        $nameCol = New-Object Windows.Controls.ColumnDefinition
+        $nameCol.Width = New-Object Windows.GridLength(1, [Windows.GridUnitType]::Star)
+        [void]$contentPanel.ColumnDefinitions.Add($iconCol)
+        [void]$contentPanel.ColumnDefinitions.Add($nameCol)
 
         $icon = New-Object Windows.Controls.Grid
+        [Windows.Controls.Grid]::SetColumn($icon, 0)
         $icon.SetResourceReference([Windows.FrameworkElement]::WidthProperty, "AppEntryIconSize")
         $icon.SetResourceReference([Windows.FrameworkElement]::HeightProperty, "AppEntryIconSize")
         $icon.Margin = New-Object Windows.Thickness(0, 0, 8, 0)
@@ -62,8 +68,12 @@ function Initialize-InstallAppEntry {
 
         # Create the TextBlock for the application name
         $appName = New-Object Windows.Controls.TextBlock
+        [Windows.Controls.Grid]::SetColumn($appName, 1)
         $appName.Style = $sync.Form.Resources.AppEntryNameStyle
         $appName.Text = $app.content
+        if ($app.foss -eq $true) {
+            $appName.Margin = New-Object Windows.Thickness(0, 0, 14, 0)
+        }
 
         # Add FOSS label after the name if FOSS
         [void]$contentPanel.Children.Add($appName)
