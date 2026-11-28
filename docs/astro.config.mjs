@@ -8,13 +8,13 @@ export default defineConfig({
 	site: 'https://winutil.rinkurapria.dev',
 	integrations: [
 		starlight({
-			title: 'winutil-MAX',
-			description: "winutil-MAX — Windows Setup & Tweaks Utility with custom enhancements, smart backups, and Stranger Things theme.",
+			title: 'Winutil-MAX',
+			description: "Winutil-MAX — Windows Setup, Debloat & Automation Suite with dual-boot BitLocker, OneDrive exclusions, and custom ISO builder.",
 			logo: {
 				src: './src/assets/branding/navlogo.png',
 				replacesTitle: true,
 			},
-			favicon: '/favicon.svg',
+			favicon: '/favicon.png',
 			head: [
 				{ tag: 'meta', attrs: { property: 'og:image', content: 'https://rinkurapria.dev/win/social-preview.png' } },
 				{ tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
@@ -49,6 +49,7 @@ export default defineConfig({
 						{ label: 'Updates', slug: 'guides/updates' },
 						{ label: 'Automation', slug: 'guides/automation' },
 						{ label: 'Win11 Creator', slug: 'guides/win11creator' },
+						{ label: 'MAX Exclusive', slug: 'guides/max' },
 					],
 				},
 				{

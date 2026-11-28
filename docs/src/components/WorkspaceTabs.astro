@@ -1,0 +1,163 @@
+---
+// Interactive 6-tab workspace preview for Winutil-MAX
+---
+
+<div class="wu-tabs-shell" data-wu-tabs>
+	<div class="wu-tabs-bar" role="tablist" aria-label="Winutil-MAX application tabs">
+		<button type="button" class="wu-tab-btn" role="tab" aria-selected="true" data-tab="max">MAX Exclusive</button>
+		<button type="button" class="wu-tab-btn" role="tab" aria-selected="false" data-tab="install">Install</button>
+		<button type="button" class="wu-tab-btn" role="tab" aria-selected="false" data-tab="tweaks">Tweaks</button>
+		<button type="button" class="wu-tab-btn" role="tab" aria-selected="false" data-tab="config">Config &amp; Fixes</button>
+		<button type="button" class="wu-tab-btn" role="tab" aria-selected="false" data-tab="updates">Updates</button>
+		<button type="button" class="wu-tab-btn" role="tab" aria-selected="false" data-tab="iso">Win11 Creator</button>
+	</div>
+
+	<div class="wu-tab-panel" role="tabpanel" data-panel="max" data-active="true">
+		<div>
+			<h3>MAX Exclusive Power Utilities</h3>
+			<p>Custom tools engineered specifically for Winutil-MAX to solve dual-boot, OneDrive, and system recovery pain points.</p>
+			<ul class="wu-tab-list">
+				<li><strong>Dual-Boot BitLocker (No TPM)</strong>: Pre-boot startup password policy without TPM PCR conflicts.</li>
+				<li><strong>OneDrive Sync Exclusion</strong>: Block OneDrive from locking <code>node_modules</code> or <code>WindowsPowerShell</code>.</li>
+				<li><strong>Bulk Name Modifier</strong>: Batch rename files and folders with regex and live preview.</li>
+				<li><strong>Winutil-MAX 2.0 Backup</strong>: Export and restore apps, tweaks, BitLocker, and OneDrive exclusions.</li>
+			</ul>
+		</div>
+		<div class="wu-tab-card">
+			<div class="wu-tab-card-head"><span>winutil-max.json</span><span>Profile Backup</span></div>
+			<div class="wu-tab-card-body">
+				<div># Export &amp; restore everything in 1 click</div>
+				<div>Config -&gt; Export Profile</div>
+				<div>&nbsp;</div>
+				<div>Includes:</div>
+				<div>- Selected WinGet / Choco Apps</div>
+				<div>- Essential &amp; Advanced Tweaks</div>
+				<div>- BitLocker Non-TPM Startup Policy</div>
+				<div>- OneDrive Sync Exclusion Rules</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="wu-tab-panel" role="tabpanel" data-panel="install" data-active="false">
+		<div>
+			<h3>Install &amp; Upgrade Applications</h3>
+			<p>Select browsers, developer tools, runtimes, and utilities and install or upgrade them silently in parallel via WinGet or Chocolatey.</p>
+			<ul class="wu-tab-list">
+				<li>Zero installer bloatware or adware bundles.</li>
+				<li>Detect already-installed apps and upgrade all with one click.</li>
+				<li>Save your app list to JSON for instant fresh-install setup.</li>
+			</ul>
+		</div>
+		<div class="wu-tab-card">
+			<div class="wu-tab-card-head"><span>install.ps1</span><span>WinGet / Choco</span></div>
+			<div class="wu-tab-card-body">
+				<div>Package Managers Supported:</div>
+				<div>- WinGet (Default)</div>
+				<div>- Chocolatey</div>
+				<div>&nbsp;</div>
+				<div>Categories: Browsers, Dev, Communications,</div>
+				<div>Document, Games, Multimedia, Utilities</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="wu-tab-panel" role="tabpanel" data-panel="tweaks" data-active="false">
+		<div>
+			<h3>Reversible System Tweaks</h3>
+			<p>Apply Standard, Minimal, or custom presets to reduce telemetry, disable background bloat, and tune Windows responsiveness.</p>
+			<ul class="wu-tab-list">
+				<li>Every registry and service tweak stores original state for clean undo.</li>
+				<li>One-click DNS switcher (Cloudflare, Google, Quad9, DHCP).</li>
+				<li>Disable Edge bloat, Windows AI/Copilot, and telemetry services.</li>
+			</ul>
+		</div>
+		<div class="wu-tab-card">
+			<div class="wu-tab-card-head"><span>tweaks.json</span><span>Reversible</span></div>
+			<div class="wu-tab-card-body">
+				<div>Presets:</div>
+				<div>- Standard (Recommended for most PCs)</div>
+				<div>- Minimal (Lightweight privacy baseline)</div>
+				<div>- Undo Selected Tweaks (100% Reversible)</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="wu-tab-panel" role="tabpanel" data-panel="config" data-active="false">
+		<div>
+			<h3>Windows Features &amp; Repair Fixes</h3>
+			<p>Enable optional Windows features or run automated repair diagnostics without hunting through Control Panel.</p>
+			<ul class="wu-tab-list">
+				<li>Toggle WSL2, Hyper-V, Windows Sandbox, and .NET Frameworks.</li>
+				<li>Run DISM / SFC system repair, network reset, and WinGet fixes.</li>
+				<li>Quick-launch legacy Control Panel, Sound, Network, and System applets.</li>
+			</ul>
+		</div>
+		<div class="wu-tab-card">
+			<div class="wu-tab-card-head"><span>feature.json</span><span>System Repair</span></div>
+			<div class="wu-tab-card-body">
+				<div>Built-in Repairs:</div>
+				<div>- Reset Network &amp; Flush DNS</div>
+				<div>- Fix Windows Update Components</div>
+				<div>- DISM + SFC /SCANNOW Corruption Scan</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="wu-tab-panel" role="tabpanel" data-panel="updates" data-active="false">
+		<div>
+			<h3>Windows Update Control</h3>
+			<p>Choose your update cadence instead of letting Windows force unexpected restarts during work.</p>
+			<ul class="wu-tab-list">
+				<li><strong>Default</strong>: Standard Microsoft update behavior.</li>
+				<li><strong>Security Only</strong>: Delay feature updates while keeping security patches.</li>
+				<li><strong>Disable</strong>: Pause automatic updates (reversible anytime).</li>
+			</ul>
+		</div>
+		<div class="wu-tab-card">
+			<div class="wu-tab-card-head"><span>updates.ps1</span><span>Policy</span></div>
+			<div class="wu-tab-card-body">
+				<div>Profiles:</div>
+				<div>[1] Default (Out of Box)</div>
+				<div>[2] Security (Recommended)</div>
+				<div>[3] Disable All Updates (Manual)</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="wu-tab-panel" role="tabpanel" data-panel="iso" data-active="false">
+		<div>
+			<h3>Custom Win11 ISO Creator</h3>
+			<p>Build a clean, debloated Windows 11 installation ISO with hardware checks bypassed and drivers pre-injected.</p>
+			<ul class="wu-tab-list">
+				<li>Automatic storage controller &amp; custom driver injection via DISM.</li>
+				<li>Unattended setup removes bloatware and skips online account walls.</li>
+				<li>Automatically places the Winutil-MAX desktop shortcut on first logon.</li>
+			</ul>
+		</div>
+		<div class="wu-tab-card">
+			<div class="wu-tab-card-head"><span>win11creator.ps1</span><span>Unattended ISO</span></div>
+			<div class="wu-tab-card-body">
+				<div>Workflow:</div>
+				<div>Select Official Win11 ISO -&gt; Inject Drivers</div>
+				<div>-&gt; Apply Unattended XML -&gt; Export ISO / USB</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+	document.querySelectorAll<HTMLElement>('[data-wu-tabs]').forEach((shell) => {
+		const buttons = shell.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+		const panels = shell.querySelectorAll<HTMLElement>('[role="tabpanel"]');
+
+		buttons.forEach((btn) => {
+			btn.addEventListener('click', () => {
+				const target = btn.dataset.tab;
+				buttons.forEach((b) => b.setAttribute('aria-selected', String(b === btn)));
+				panels.forEach((p) => {
+					p.dataset.active = String(p.dataset.panel === target);
+				});
+			});
+		});
+	});
+</script>

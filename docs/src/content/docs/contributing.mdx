@@ -10,7 +10,7 @@ description: How to test, report issues, and contribute code to WinUtil.
 #### Run the latest pre-release
 
 ```ps1
-irm https://christitus.com/windev | iex
+irm https://rinkurapria.dev/win | iex
 ```
 
 :::caution
@@ -75,7 +75,7 @@ This is a diagram to guide you through the process. It may vary depending on the
 :::
 
 ### Fork the Repo
-* Fork the WinUtil Repository [here](https://github.com/ChrisTitusTech/winutil) to create a copy that will be available in your repository list.
+* Fork the Winutil-MAX Repository [here](https://github.com/R-Rinku/winutil-max) to create a copy that will be available in your repository list.
 
 ![Fork Image](../../assets/contributing/Fork-Button-Dark.png)
 
@@ -119,6 +119,6 @@ While you can make your changes directly through the Web, we recommend cloning t
 ![Push Commit Image](../../assets/contributing/Push-Commit.png)
 
 ### Making a PR
-* To make a PR on your repo under a new branch linking to the main branch, a button will show and say Preview and Create pull request. Click that button and fill in all the information that is provided on the template. Once all the information is filled in correctly, check your PR to make sure there is no WinUtil.ps1 file attached to the PR. Once everything is good, make the PR and wait for Chris (the maintainer) to accept or deny your PR. Once it is accepted by Chris, you will be able to see your changes in the "/windev" build.
-* If you do not see your feature in the main "/win" build, that is fine. All new changes go into the /windev build to make sure everything is working OK before going fully public.
-* Congratulations! You just submitted your first PR. Thank you so much for contributing to WinUtil.
+* To make a PR on your fork under a new branch targeting the `main` branch of `R-Rinku/winutil-max`, click **Create pull request** and fill in the PR template. Before submitting, verify that `winutil.ps1` is **not** included in your diff (it is generated automatically at release time).
+* Winutil-MAX uses a single `main` release channel, so approved pull requests ship directly on `main`.
+* Congratulations! You just submitted your PR. Thank you for contributing to Winutil-MAX.

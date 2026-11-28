@@ -9,14 +9,12 @@ const year = new Date().getFullYear();
 ---
 
 <footer class="sl-flex">
-	{/* Edit link + last-updated timestamp, and prev/next pagination. */}
 	<div class="meta sl-flex">
 		<EditLink />
 		<LastUpdated />
 	</div>
 	<Pagination />
 
-	{/* "Built with Starlight" credit (only shown if Starlight's `credits` config is enabled). */}
 	{
 		config.credits && (
 			<a class="kudos sl-flex" href="https://starlight.astro.build">
@@ -25,19 +23,23 @@ const year = new Date().getFullYear();
 		)
 	}
 
-	{/* Copyright & Upstream Credit line. */}
 	<div class="site-footer-copyright">
-		<div>© {year} <a href="https://github.com/R-Rinku/winutil-max">winutil-MAX</a>. Open source under the MIT License.</div>
-		<div style="margin-top: 0.35rem; color: var(--sl-color-gray-3);">
-			Built upon the foundational work of <a href="https://christitus.com" target="_blank" rel="noreferrer">Chris Titus Tech</a>.
-			Support Chris Titus's work at the <a href="https://cttstore.com/products/windows-toolbox" target="_blank" rel="noreferrer">Official CTT Store</a>.
+		<div class="site-footer-links">
+			<a href="https://github.com/R-Rinku/winutil-max">GitHub</a>
+			<span class="site-footer-sep">&middot;</span>
+			<a href="/guides/">Docs</a>
+			<span class="site-footer-sep">&middot;</span>
+			<a href="/contributing/">Contributing</a>
+		</div>
+		<div class="site-footer-line">
+			&copy; {year} <a href="https://github.com/R-Rinku/winutil-max">Winutil-MAX</a>. MIT License.
+			Built upon <a href="https://github.com/ChrisTitusTech/winutil" target="_blank" rel="noreferrer">Chris Titus Tech&rsquo;s WinUtil</a>.
 		</div>
 	</div>
 </footer>
 
 <style>
 	@layer starlight.core {
-		/* Footer layout: stacked meta row + pagination. */
 		footer {
 			flex-direction: column;
 			gap: 1.5rem;
@@ -48,49 +50,58 @@ const year = new Date().getFullYear();
 			flex-wrap: wrap;
 			margin-top: 3rem;
 			font-size: var(--sl-text-sm);
-			color: var(--sl-color-gray-3);
+			color: var(--color-mid-ash, #a5a2a5);
 		}
 		.meta > :global(p:only-child) {
 			margin-inline-start: auto;
 		}
 
-		/* "Built with Starlight" credit link. */
 		.kudos {
 			align-items: center;
 			gap: 0.5em;
 			margin: 1.5rem auto;
 			font-size: var(--sl-text-xs);
 			text-decoration: none;
-			color: var(--sl-color-gray-3);
+			color: var(--color-mid-ash, #a5a2a5);
 		}
 		.kudos:hover {
-			color: var(--sl-color-white);
+			color: var(--color-bone-white, #f1f0ec);
 		}
 	}
 
-	@layer starlight.components {
-		.kudos :global(svg) {
-			color: var(--sl-color-orange);
-		}
-	}
-
-	/* Collapse the meta/pagination rows entirely when they have nothing in them (e.g. editUrl: false and no prev/next), instead of leaving an empty gap. */
 	footer .meta:empty,
 	footer :global(.pagination-links):empty {
 		display: none;
 		margin: 0;
 	}
 
-	/* Site-wide copyright line, matching the previous Hugo docs site's footer. The divider above it comes from Starlight's own .content-panel border. */
 	.site-footer-copyright {
-		font-size: var(--sl-text-xs);
-		color: var(--sl-color-gray-3);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.35rem;
+		padding-top: 1.25rem;
+		border-top: 1px solid rgba(229, 231, 235, 0.1);
+		font-size: 0.78rem;
+		color: var(--color-mid-ash, #a5a2a5);
+		text-align: center;
 	}
+
+	.site-footer-links {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.site-footer-sep {
+		color: var(--color-iron-edge, #55505b);
+	}
+
 	.site-footer-copyright a {
 		color: inherit;
-		text-decoration: underline;
+		text-decoration: none;
+		transition: color 0.15s ease;
 	}
 	.site-footer-copyright a:hover {
-		color: var(--sl-color-white);
+		color: var(--color-lavender-spark, #b997ff);
 	}
 </style>

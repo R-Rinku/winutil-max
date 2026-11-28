@@ -7,23 +7,19 @@ import SiteTitle from 'virtual:starlight/components/SiteTitle';
 import SocialIcons from 'virtual:starlight/components/SocialIcons';
 import ThemeSelect from 'virtual:starlight/components/ThemeSelect';
 import { Icon } from '@astrojs/starlight/components';
-import { siteLinks } from '../site-links';
 
-// Render the `Search` component if Pagefind is enabled or the default search component has been overridden.
 const shouldRenderSearch =
 	config.pagefind || config.components.Search !== '@astrojs/starlight/components/Search.astro';
 
-// Pages with a sidebar already have Starlight's own mobile menu toggle; only splash pages need this one.
 const { hasSidebar } = Astro.locals.starlightRoute;
 ---
 
 <div class="header">
-	{/* Site title. */}
 	<div class="title-wrapper sl-flex">
 		<SiteTitle />
 	</div>
+
 	<div class="mobile-actions sl-flex">
-		{/* Search box. */}
 		<div class="sl-flex print:hidden">
 			{shouldRenderSearch && <Search />}
 		</div>
@@ -38,51 +34,46 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 						<div class="site-nav-panel-group">
 							<p class="site-nav-panel-heading">Documentation</p>
 							<a href="/guides/">User Guides</a>
-							<a href="/contributing/">Contribution Guides</a>
-							<a href="/code-reference/architecture/">Code Reference</a>
+							<a href="/guides/tweaks/">Tweaks</a>
+							<a href="/guides/win11creator/">Win11 ISO Creator</a>
+							<a href="/code-reference/architecture/">Architecture</a>
 						</div>
 						<div class="site-nav-panel-group">
-							<p class="site-nav-panel-heading">Help</p>
+							<p class="site-nav-panel-heading">Community</p>
 							<a href="/faq/">FAQ</a>
 							<a href="/knownissues/">Known Issues</a>
-							<a href={siteLinks.forums.href} target="_blank" rel="noreferrer">{siteLinks.forums.label}</a>
+							<a href="/contributing/">Contributing</a>
 						</div>
-						<a class="site-nav-panel-link" href={siteLinks.store.href} target="_blank" rel="noreferrer">{siteLinks.store.label}</a>
+						<a class="site-nav-panel-link" href="/#bootstrap">Launch Script →</a>
 					</div>
 				</div>
 			)
 		}
 	</div>
-	{/* Right-side group: nav links, social icons, theme/language pickers. */}
+
 	<div class="sl-hidden md:sl-flex print:hidden right-group">
 		<nav class="site-nav" aria-label="Top">
-			{/* "Documentation" dropdown. */}
+			<a class="site-nav-link" href="/guides/">Docs</a>
+			<a class="site-nav-link" href="/guides/tweaks/">Tweaks</a>
+			<a class="site-nav-link" href="/guides/win11creator/">Win11 ISO</a>
 			<div class="site-nav-dropdown">
 				<details name="site-nav-dropdown">
-					<summary class="site-nav-link">Documentation</summary>
+					<summary class="site-nav-link">More</summary>
 				</details>
 				<div class="site-nav-menu">
-					<a href="/guides/">User Guides</a>
-					<a href="/contributing/">Contribution Guides</a>
-					<a href="/code-reference/architecture/">Code Reference</a>
-				</div>
-			</div>
-			{/* "Help" dropdown. */}
-			<div class="site-nav-dropdown">
-				<details name="site-nav-dropdown">
-					<summary class="site-nav-link">Help</summary>
-				</details>
-				<div class="site-nav-menu">
+					<a href="/code-reference/architecture/">Architecture</a>
 					<a href="/faq/">FAQ</a>
 					<a href="/knownissues/">Known Issues</a>
-					<a href={siteLinks.forums.href} target="_blank" rel="noreferrer">{siteLinks.forums.label}</a>
+					<a href="/contributing/">Contributing</a>
 				</div>
 			</div>
-			<a class="site-nav-link" href={siteLinks.store.href} target="_blank" rel="noreferrer">{siteLinks.store.label}</a>
 		</nav>
+
 		<div class="sl-flex social-icons">
 			<SocialIcons />
 		</div>
+
+		<a class="wu-nav-cta" href="/#bootstrap">Launch Script &rarr;</a>
 		<ThemeSelect />
 		<LanguageSelect />
 	</div>
@@ -102,14 +93,12 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 				btn.focus();
 			}
 		});
-		// Collapse the panel if the viewport grows past the mobile breakpoint.
 		matchMedia('(min-width: 50em)').addEventListener('change', () => setExpanded(false));
 	}
 </script>
 
 <style>
 	@layer starlight.core {
-		/* Header shell: title, search, right-side nav group. */
 		.header {
 			display: flex;
 			gap: var(--sl-nav-gap);
@@ -119,7 +108,6 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 		}
 
 		.title-wrapper {
-			/* Clips long titles instead of overflowing onto the search/menu buttons; padding/negative margin avoids clipping the focus ring. */
 			overflow: clip;
 			padding: 0.25rem;
 			margin: -0.25rem;
@@ -131,16 +119,10 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 			gap: 0.75rem;
 		}
 
-		/* Right-side group: nav + social icons, divided by a hairline. */
 		.right-group,
 		.social-icons {
 			gap: 1rem;
 			align-items: center;
-		}
-		.social-icons::after {
-			content: '';
-			height: 2rem;
-			border-inline-end: 1px solid var(--sl-color-hairline-light);
 		}
 
 		@media (min-width: 50rem) {
@@ -150,7 +132,6 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 			:global(:root:not([data-has-toc])) {
 				--__toc-width: 0rem;
 			}
-			/* Columns: site title */
 			.header {
 				--__sidebar-width: max(0rem, var(--sl-content-inline-start, 0rem) - var(--sl-nav-pad-x));
 				--__main-column-fr: calc(
@@ -173,20 +154,18 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 		}
 	}
 
-	/* Top nav links + dropdowns. */
 	.site-nav {
 		display: flex;
 		align-items: center;
-		gap: 1.25rem;
+		gap: 1.35rem;
 		padding-inline-end: 1.25rem;
-		border-inline-end: 1px solid var(--sl-color-hairline-light);
+		border-inline-end: 1px solid rgba(229, 231, 235, 0.12);
 	}
 
-	/* Top nav trigger: shared style for plain links and dropdown triggers. */
 	.site-nav-link {
-		font-size: var(--sl-text-sm);
-		font-weight: 500;
-		color: var(--sl-color-gray-2);
+		font-size: 0.875rem;
+		font-weight: 450;
+		color: var(--color-ash-veil, #d0c9c4);
 		background: none;
 		border: none;
 		padding: 0;
@@ -194,18 +173,35 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 		cursor: pointer;
 		white-space: nowrap;
 		text-decoration: none;
+		transition: color 0.15s ease;
 	}
 	.site-nav-link:hover {
-		color: var(--sl-color-white);
+		color: var(--color-bone-white, #f1f0ec);
 	}
 
-	/* Extends the hoverable box down to the menu, closing the dead zone between trigger and menu. */
+	.wu-nav-cta {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.45rem 0.9rem;
+		border-radius: 10px;
+		background: var(--color-signal-green, #00f575);
+		color: #000000 !important;
+		font-size: 0.82rem;
+		font-weight: 600;
+		text-decoration: none;
+		white-space: nowrap;
+		transition: transform 0.15s ease, filter 0.15s ease;
+	}
+	.wu-nav-cta:hover {
+		filter: brightness(1.06);
+		transform: translateY(-1px);
+	}
+
 	.site-nav-dropdown {
 		position: relative;
 		padding-bottom: 0.75rem;
 		margin-bottom: -0.75rem;
 	}
-	/* No box of its own; only the <summary> lays out. Its `open` state (no JS) is read by .site-nav-menu below. */
 	.site-nav-dropdown > details {
 		display: contents;
 	}
@@ -217,41 +213,39 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 	.site-nav-dropdown > details > summary::-webkit-details-marker {
 		display: none;
 	}
-	/* Dropdown menu panel: shown on hover (mouse) or when the sibling <details> is toggled open (touch/keyboard). */
 	.site-nav-menu {
 		display: none;
 		position: absolute;
 		top: 100%;
 		left: 50%;
 		transform: translateX(-50%);
-		min-width: 11rem;
+		min-width: 11.5rem;
 		padding: 0.5rem;
 		flex-direction: column;
-		gap: 0.125rem;
-		background: var(--sl-color-bg-nav);
-		border: 1px solid var(--sl-color-hairline-light);
-		border-radius: var(--wu-radius-sm, 0.5rem);
-		box-shadow: var(--sl-shadow-lg);
-		z-index: 10;
+		gap: 0.15rem;
+		background: var(--color-shadow-plum, #2d2734);
+		border: 1px solid rgba(229, 231, 235, 0.14);
+		border-radius: 12px;
+		box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
+		z-index: 20;
 	}
 	.site-nav-dropdown:hover .site-nav-menu,
 	.site-nav-dropdown:has(details[open]) .site-nav-menu {
 		display: flex;
 	}
 	.site-nav-menu a {
-		padding: 0.4rem 0.6rem;
-		border-radius: var(--wu-radius-sm, 0.5rem);
-		font-size: var(--sl-text-sm);
-		color: var(--sl-color-gray-2);
+		padding: 0.45rem 0.65rem;
+		border-radius: 8px;
+		font-size: 0.85rem;
+		color: var(--color-ash-veil, #d0c9c4);
 		text-decoration: none;
 		white-space: nowrap;
 	}
 	.site-nav-menu a:hover {
-		color: var(--sl-color-white);
-		background: var(--sl-color-gray-6);
+		color: var(--color-bone-white, #f1f0ec);
+		background: rgba(185, 151, 255, 0.12);
 	}
 
-	/* Mobile equivalent of the site-nav, shown via a toggle button since the desktop nav is hidden below `md`. */
 	.site-nav-toggle button {
 		display: flex;
 		align-items: center;
@@ -259,14 +253,14 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 		width: 2.25rem;
 		height: 2.25rem;
 		border: 0;
-		border-radius: var(--wu-radius-sm, 0.5rem);
+		border-radius: 8px;
 		padding: 0;
 		background: none;
-		color: var(--sl-color-gray-2);
+		color: var(--color-ash-veil, #d0c9c4);
 		cursor: pointer;
 	}
 	.site-nav-toggle button:hover {
-		color: var(--sl-color-white);
+		color: var(--color-bone-white, #f1f0ec);
 	}
 	.site-nav-toggle button svg {
 		width: 1.25rem;
@@ -288,44 +282,41 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 		max-height: calc(100vh - var(--sl-nav-height));
 		overflow-y: auto;
 		padding: 1rem var(--sl-nav-pad-x) 1.5rem;
-		background: var(--sl-color-bg-nav);
-		border-bottom: 1px solid var(--sl-color-hairline-shade);
+		background: var(--color-midnight-plum, #1c1624);
+		border-bottom: 1px solid rgba(229, 231, 235, 0.14);
 	}
 	.site-nav-toggle button[aria-expanded='true'] ~ .site-nav-panel {
 		display: flex;
 	}
 	.site-nav-panel-link {
-		padding: 0.5rem 0.25rem;
-		font-size: var(--sl-text-sm);
-		font-weight: 500;
-		color: var(--sl-color-gray-2);
+		padding: 0.6rem 0.25rem;
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: var(--color-signal-green, #00f575);
 		text-decoration: none;
-	}
-	.site-nav-panel-link:hover {
-		color: var(--sl-color-white);
 	}
 	.site-nav-panel-group {
 		display: flex;
 		flex-direction: column;
-		border-top: 1px solid var(--sl-color-hairline-light);
+		border-top: 1px solid rgba(229, 231, 235, 0.1);
 		padding-top: 0.5rem;
 	}
 	.site-nav-panel-heading {
 		margin: 0 0 0.25rem;
 		padding: 0 0.25rem;
-		font-size: var(--sl-text-xs);
+		font-size: 0.72rem;
 		font-weight: 600;
 		text-transform: uppercase;
-		letter-spacing: 0.02em;
-		color: var(--sl-color-gray-3);
+		letter-spacing: 0.04em;
+		color: var(--color-lavender-spark, #b997ff);
 	}
 	.site-nav-panel-group a {
-		padding: 0.5rem 0.25rem;
-		font-size: var(--sl-text-sm);
-		color: var(--sl-color-gray-2);
+		padding: 0.45rem 0.25rem;
+		font-size: 0.875rem;
+		color: var(--color-ash-veil, #d0c9c4);
 		text-decoration: none;
 	}
 	.site-nav-panel-group a:hover {
-		color: var(--sl-color-white);
+		color: var(--color-bone-white, #f1f0ec);
 	}
 </style>

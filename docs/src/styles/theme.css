@@ -1,173 +1,310 @@
-/* WinUtil-MAX Theme: Refero & DesignMD Dark Bento Aesthetic with Obsidian & Crimson Neon Accents */
+/*
+ * Winutil-MAX — Doppler Dark-Mode Design System
+ * Midnight Plum (#1c1624) canvas, Shadow Plum (#2d2734) 20px-rounded surfaces,
+ * Bone White (#f1f0ec) typography, Lavender Spark (#b997ff) brand voice,
+ * and Signal Green (#00f575) strictly for primary action CTAs.
+ */
 @import './fonts.css';
 
+/* ─── Design Tokens ────────────────────────────────────────────── */
 :root {
-	--sl-font: 'Geist', var(--sl-font-system);
-	--sl-font-mono: 'JetBrains Mono Variable', var(--sl-font-system-mono);
+	--sl-font: 'Geist', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	--sl-font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-	/* WinUtil-MAX Brand Accent: Neon Crimson / Upside Down Red (#E50914 / #FF1E56). */
-	--wu-accent-h: 350;
-	--wu-accent: #e50914;
-	--wu-accent-glow: #ff1e56;
-	--wu-accent-dim: #b8050e;
+	/* Doppler Color System */
+	--color-midnight-plum: #1c1624;
+	--color-shadow-plum: #2d2734;
+	--color-elevated-plum: #3a3340;
+	--color-bone-white: #f1f0ec;
+	--color-fog-line: #e5e7eb;
+	--color-ash-veil: #d0c9c4;
+	--color-mid-ash: #a5a2a5;
+	--color-iron-edge: #55505b;
+	--color-lavender-spark: #b997ff;
+	--color-signal-green: #00f575;
+	--color-neon-violet: #6b13f5;
+	--color-ember-orange: #ff5632;
+	--color-plasma-pink: #ff9efa;
 
-	--wu-radius-sm: 0.5rem;
-	--wu-radius: 0.75rem;
-	--wu-radius-lg: 1rem;
-	--wu-radius-xl: 1.25rem;
+	/* Semantic Aliases */
+	--wu-bg: var(--color-midnight-plum);
+	--wu-surface: var(--color-shadow-plum);
+	--wu-surface-elevated: var(--color-elevated-plum);
+	--wu-border: rgba(229, 231, 235, 0.14);
+	--wu-border-subtle: rgba(229, 231, 235, 0.08);
+	--wu-border-hover: rgba(185, 151, 255, 0.4);
+
+	--wu-radius-sm: 8px;
+	--wu-radius-btn: 12px;
+	--wu-radius-card: 20px;
+	--wu-radius-pill: 9999px;
+
+	--wu-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Dark mode (default & primary mode). */
+/* ─── Starlight Global Theme Mapping (Applied Across ALL Docs Pages) ─── */
 :root,
 ::backdrop {
-	--sl-color-accent-low: rgba(229, 9, 20, 0.16);
-	--sl-color-accent: var(--wu-accent);
-	--sl-color-accent-high: #ff6688;
+	--sl-color-accent-low: rgba(185, 151, 255, 0.14);
+	--sl-color-accent: var(--color-lavender-spark);
+	--sl-color-accent-high: #d4beff;
 
-	--sl-color-white: #ffffff;
-	--sl-color-gray-1: #f4f4f5;
-	--sl-color-gray-2: #d4d4d8;
-	--sl-color-gray-3: #a1a1aa;
-	--sl-color-gray-4: #52525b;
-	--sl-color-gray-5: #27272a;
-	--sl-color-gray-6: #18181b;
-	--sl-color-black: #08090c;
+	--sl-color-white: var(--color-bone-white);
+	--sl-color-gray-1: var(--color-bone-white);
+	--sl-color-gray-2: var(--color-ash-veil);
+	--sl-color-gray-3: var(--color-mid-ash);
+	--sl-color-gray-4: var(--color-iron-edge);
+	--sl-color-gray-5: var(--color-elevated-plum);
+	--sl-color-gray-6: var(--color-shadow-plum);
+	--sl-color-black: var(--color-midnight-plum);
+	--sl-color-text-invert: #000000;
 
-	--sl-color-bg: #08090c;
-	--sl-color-bg-nav: rgba(12, 13, 18, 0.85);
-	--sl-color-bg-sidebar: #0b0c10;
-	--sl-color-bg-inline-code: #1c1d24;
-	--sl-color-hairline-light: rgba(255, 255, 255, 0.08);
-	--sl-color-hairline: rgba(255, 255, 255, 0.05);
-	--sl-color-hairline-shade: #000000;
+	--sl-color-bg: var(--color-midnight-plum);
+	--sl-color-bg-nav: rgba(28, 22, 36, 0.82);
+	--sl-color-bg-sidebar: #16111d;
+	--sl-color-bg-inline-code: var(--color-shadow-plum);
+	--sl-color-hairline-light: var(--wu-border);
+	--sl-color-hairline: var(--wu-border-subtle);
+	--sl-color-hairline-shade: rgba(0, 0, 0, 0.5);
 }
 
-/* Glassmorphism Navigation */
+html {
+	scroll-behavior: smooth;
+	background-color: var(--color-midnight-plum);
+}
+
+body {
+	background-color: var(--color-midnight-plum);
+	color: var(--color-bone-white);
+}
+
+::selection {
+	background: rgba(185, 151, 255, 0.28);
+	color: var(--color-bone-white);
+}
+
+/* Frosted-Glass Sticky Header */
 header.header {
-	backdrop-filter: blur(16px);
-	-webkit-backdrop-filter: blur(16px);
-	border-bottom: 1px solid var(--sl-color-hairline-light) !important;
-	background-color: var(--sl-color-bg-nav) !important;
+	backdrop-filter: blur(14px);
+	-webkit-backdrop-filter: blur(14px);
+	border-bottom: 1px solid rgba(229, 231, 235, 0.1) !important;
+	background: rgba(28, 22, 36, 0.8) !important;
 }
 
-/* Refero Buttons */
+/* Hide Starlight search dialog when closed */
+dialog[aria-label="Search"]:not([open]) {
+	display: none !important;
+}
+
+/* Fix active sidebar link across /guides/ and /code-reference/ */
+.sidebar-content a[aria-current="page"],
+.sidebar-content a[aria-current="page"]:hover {
+	background: rgba(185, 151, 255, 0.15) !important;
+	color: var(--color-lavender-spark) !important;
+	border-left: 2px solid var(--color-lavender-spark);
+	font-weight: 600;
+}
+
+/* Docs prose cards, code blocks, and callouts harmonized with Shadow Plum */
+.sl-markdown-content pre {
+	background: #140f1a !important;
+	border: 1px solid var(--wu-border) !important;
+	border-radius: 12px !important;
+}
+.starlight-aside {
+	border-radius: 14px !important;
+	background: var(--color-shadow-plum) !important;
+	border-color: var(--wu-border) !important;
+}
+
+/* ─── Buttons ──────────────────────────────────────────────────── */
 .wu-btn {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: 0.5rem;
+	gap: 0.45rem;
 	padding: 0.75rem 1.4rem;
-	border-radius: var(--wu-radius);
-	font-size: var(--sl-text-sm);
-	font-weight: 600;
+	border-radius: var(--wu-radius-btn);
+	font-size: 0.9375rem;
+	font-weight: 500;
 	text-decoration: none;
-	transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+	transition: all 0.18s var(--wu-ease);
 	cursor: pointer;
+	line-height: 1.2;
 }
 
+/* Signal Green Primary Action — rationed for key CTAs */
 .wu-btn-primary {
-	background: linear-gradient(135deg, #e50914 0%, #ff1e56 100%);
-	color: #ffffff !important;
-	border: 1px solid rgba(255, 255, 255, 0.2);
-	box-shadow: 0 4px 18px rgba(229, 9, 20, 0.35);
+	background: var(--color-signal-green);
+	color: #000000 !important;
+	border: 1px solid rgba(0, 245, 117, 0.6);
+	font-weight: 600;
 }
 .wu-btn-primary:hover {
+	filter: brightness(1.06);
 	transform: translateY(-1px);
-	box-shadow: 0 8px 25px rgba(229, 9, 20, 0.5);
-	filter: brightness(1.1);
+	box-shadow: 0 6px 24px rgba(0, 245, 117, 0.25);
 }
 
+/* Ghost Outline Button */
 .wu-btn-secondary {
-	background: rgba(24, 24, 32, 0.75);
-	color: var(--sl-color-gray-1) !important;
-	border: 1px solid var(--sl-color-hairline-light);
-	backdrop-filter: blur(12px);
+	background: transparent;
+	color: var(--color-bone-white) !important;
+	border: 1px solid rgba(229, 231, 235, 0.25);
 }
 .wu-btn-secondary:hover {
-	background: rgba(36, 36, 48, 0.9);
-	border-color: rgba(255, 255, 255, 0.2);
-	color: #ffffff !important;
+	background: rgba(255, 255, 255, 0.05);
+	border-color: var(--color-lavender-spark);
 	transform: translateY(-1px);
 }
 
-/* Gradient text */
-.wu-gradient-text {
-	background: linear-gradient(135deg, #ffffff 40%, #ff3366 100%);
-	-webkit-background-clip: text;
-	-webkit-text-fill-color: transparent;
+/* ─── Eyebrow Label ────────────────────────────────────────────── */
+.wu-eyebrow {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.25rem 0.75rem;
+	border-radius: var(--wu-radius-pill);
+	background: rgba(185, 151, 255, 0.1);
+	border: 1px solid rgba(185, 151, 255, 0.25);
+	color: var(--color-lavender-spark) !important;
+	font-size: 0.75rem !important;
+	font-weight: 600;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
 }
 
-/* Sections */
+/* ─── Gradient Highlight Word ──────────────────────────────────── */
+.wu-gradient-word {
+	background: linear-gradient(91deg, #855aff 14%, #ff5632 90%);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+	display: inline-block;
+}
+
+/* ─── Sections (1200px max-width, 64px rhythm) ────────────────── */
 .wu-section {
-	padding-block: 4.5rem;
 	position: relative;
+	padding-block: 4rem;
 }
 .wu-section--tint {
-	background-color: rgba(16, 17, 24, 0.5);
-	border-block: 1px solid var(--sl-color-hairline-light);
+	background: rgba(45, 39, 52, 0.22);
+	border-block: 1px solid var(--wu-border-subtle);
 }
 
 .wu-section-inner {
-	max-width: 76rem;
+	max-width: 1200px;
 	margin-inline: auto;
 	padding-inline: 1.5rem;
 }
+
 .wu-text-narrow {
-	max-width: 46rem;
+	max-width: 54rem;
 	margin-inline: auto;
 }
 
 .wu-section-head {
 	max-width: 44rem;
-	margin: 0 auto 3rem;
+	margin: 0 auto 2.75rem;
 	text-align: center;
 }
 .wu-section-head h2 {
-	margin: 0;
-	font-size: clamp(var(--sl-text-3xl), 3vw, var(--sl-text-4xl));
-	font-weight: 800;
+	margin: 0.75rem 0 0;
+	font-size: clamp(1.75rem, 3.2vw, 2.5rem);
+	font-weight: 600;
 	letter-spacing: -0.02em;
-	color: var(--sl-color-white);
+	line-height: 1.15;
+	color: var(--color-bone-white);
 }
 .wu-section-head p {
-	margin: 1rem 0 0;
-	font-size: var(--sl-text-lg);
-	color: var(--sl-color-gray-3);
-	line-height: 1.6;
+	margin: 0.75rem 0 0;
+	font-size: 1rem;
+	color: var(--color-ash-veil);
+	line-height: 1.55;
 }
 
-/* Trust Bar / Feature Chips */
-.wu-trust-bar {
+/* ─── Copyable CLI Box (Zero Overflow Guaranteed) ──────────────── */
+.wu-cli-box {
 	display: flex;
-	flex-wrap: wrap;
-	justify-content: center;
 	align-items: center;
-	gap: 0.75rem 1.25rem;
+	justify-content: space-between;
+	gap: 0.75rem;
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+	padding: 0.55rem 0.65rem 0.55rem 1rem;
+	border-radius: var(--wu-radius-btn);
+	background: var(--color-midnight-plum);
+	border: 1px solid var(--wu-border);
+	transition: border-color 0.18s var(--wu-ease);
+	min-width: 0;
 }
-.wu-trust-item {
+.wu-cli-box:hover {
+	border-color: var(--color-lavender-spark);
+}
+.wu-cli-cmd {
+	flex: 1 1 auto;
+	min-width: 0;
+	font-family: var(--sl-font-mono);
+	font-size: 0.84rem;
+	color: var(--color-bone-white);
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
-	padding: 0.4rem 0.9rem;
-	border-radius: 999px;
-	background: rgba(24, 24, 32, 0.6);
-	border: 1px solid var(--sl-color-hairline-light);
-	font-size: var(--sl-text-xs);
-	font-weight: 600;
-	color: var(--sl-color-gray-2);
+	overflow-x: auto;
+	overflow-y: hidden;
+	scrollbar-width: none;
+	white-space: nowrap;
 }
-.wu-trust-item svg {
-	color: #ff3366;
-	width: 1rem;
-	height: 1rem;
+.wu-cli-cmd::-webkit-scrollbar {
+	display: none;
+}
+.wu-cli-cmd code {
+	background: transparent !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	border: none !important;
+	line-height: 1.4;
+	font-size: inherit;
+	color: inherit;
+}
+.wu-cli-prompt {
+	color: var(--color-lavender-spark);
+	font-weight: 700;
+	user-select: none;
+	flex-shrink: 0;
+}
+.wu-cli-copy {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.42rem 0.8rem;
+	border-radius: var(--wu-radius-sm);
+	border: 1px solid var(--wu-border);
+	background: var(--color-shadow-plum);
+	color: var(--color-bone-white);
+	font-size: 0.75rem;
+	font-weight: 600;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: all 0.15s var(--wu-ease);
+}
+.wu-cli-copy:hover {
+	border-color: var(--color-lavender-spark);
+	background: var(--color-elevated-plum);
+}
+.wu-cli-copy[data-copied='true'] {
+	background: rgba(0, 245, 117, 0.15);
+	border-color: var(--color-signal-green);
+	color: var(--color-signal-green);
 }
 
-/* Bento Grid */
+/* ─── Bento Grid (20px rounded Shadow Plum cards) ──────────────── */
 .wu-bento-grid {
 	display: grid;
 	grid-template-columns: 1fr;
-	gap: 1.5rem;
-	margin-top: 2.5rem;
+	gap: 1.25rem;
 }
 @media (min-width: 50rem) {
 	.wu-bento-grid {
@@ -175,78 +312,178 @@ header.header {
 	}
 }
 
-/* Interactive CLI Box */
-.wu-cli-box {
+/* ─── Interactive Workspace Tabs ───────────────────────────────── */
+@keyframes wuTabFadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.wu-tabs-shell {
+	border: 1px solid var(--wu-border);
+	border-radius: var(--wu-radius-card);
+	background: var(--color-shadow-plum);
+	overflow: hidden;
+}
+.wu-tabs-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.85rem 1.1rem;
+	background: rgba(28, 22, 36, 0.6);
+	border-bottom: 1px solid var(--wu-border);
+}
+.wu-tab-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0;
+	padding: 0.5rem 1rem;
+	line-height: 1.25;
+	border-radius: var(--wu-radius-sm);
+	border: 1px solid transparent;
+	background: transparent;
+	color: var(--color-ash-veil);
+	font-size: 0.84rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s var(--wu-ease);
+}
+.wu-tab-btn:hover {
+	color: var(--color-bone-white);
+	background: rgba(255, 255, 255, 0.05);
+}
+.wu-tab-btn[aria-selected='true'] {
+	background: rgba(185, 151, 255, 0.16);
+	color: var(--color-lavender-spark);
+	border-color: rgba(185, 151, 255, 0.35);
+	font-weight: 600;
+}
+.wu-tab-panel {
+	display: none;
+	padding: 2rem;
+}
+.wu-tab-panel[data-active='true'] {
+	display: grid;
+	gap: 1.75rem;
+	align-items: center;
+	animation: wuTabFadeIn 0.26s var(--wu-ease) forwards;
+}
+@media (min-width: 50rem) {
+	.wu-tab-panel[data-active='true'] {
+		grid-template-columns: 1.15fr 0.85fr;
+	}
+}
+.wu-tab-panel h3 {
+	margin: 0 0 0.5rem;
+	font-size: 1.35rem;
+	font-weight: 600;
+	color: var(--color-bone-white);
+}
+.wu-tab-panel p {
+	margin: 0 0 1rem;
+	color: var(--color-ash-veil);
+	line-height: 1.6;
+}
+.wu-tab-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: grid;
+	gap: 0.65rem;
+}
+.wu-tab-list li {
+	position: relative;
+	padding-left: 1.15rem;
+	font-size: 0.9rem;
+	line-height: 1.55;
+	color: var(--color-ash-veil);
+}
+.wu-tab-list li::before {
+	position: absolute;
+	left: 0;
+	top: 0;
+	content: '▸';
+	color: var(--color-lavender-spark);
+	font-weight: 700;
+}
+.wu-tab-card {
+	border-radius: 14px;
+	background: var(--color-midnight-plum);
+	border: 1px solid var(--wu-border);
+	overflow: hidden;
+}
+.wu-tab-card-head {
+	padding: 0.55rem 1rem;
+	font-family: var(--sl-font-mono);
+	font-size: 0.72rem;
+	color: var(--color-mid-ash);
+	background: rgba(255, 255, 255, 0.03);
+	border-bottom: 1px solid var(--wu-border);
+	display: flex;
+	justify-content: space-between;
+}
+.wu-tab-card-body {
+	padding: 1.15rem 1.25rem;
+	font-family: var(--sl-font-mono);
+	font-size: 0.8rem;
+	color: var(--color-ash-veil);
+	line-height: 1.65;
+}
+
+/* ─── Techy Split Bootstrap Cards ──────────────────────────────── */
+.wu-bootstrap-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 1.25rem;
+}
+@media (min-width: 52rem) {
+	.wu-bootstrap-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+.wu-bootstrap-card {
+	background: var(--color-shadow-plum);
+	border: 1px solid var(--wu-border);
+	border-radius: var(--wu-radius-card);
+	padding: 1.5rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.85rem;
+	min-width: 0;
+}
+.wu-bootstrap-head {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	max-width: 42rem;
-	margin: 2rem auto 0;
-	padding: 0.85rem 1.25rem;
-	border-radius: var(--wu-radius);
-	background: #0f1015;
-	border: 1px solid rgba(229, 9, 20, 0.4);
-	box-shadow: 0 8px 30px rgba(229, 9, 20, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-.wu-cli-cmd {
-	font-family: var(--sl-font-mono);
-	font-size: var(--sl-text-sm);
-	color: #ffffff;
-	display: flex;
-	align-items: center;
-	gap: 0.6rem;
-}
-.wu-cli-prompt {
-	color: #ff3366;
-	font-weight: bold;
-}
-
-/* Benefit Checklist */
-.wu-benefit-list {
-	display: flex;
-	flex-direction: column;
-	gap: 1.2rem;
-	margin: 2.5rem 0 0;
-	padding: 0;
-	list-style: none;
-}
-.wu-benefit-list li {
-	display: flex;
-	align-items: flex-start;
-	gap: 1rem;
-	font-size: var(--sl-text-base);
-	color: var(--sl-color-gray-2);
-}
-.wu-benefit-list .wu-check {
-	flex: none;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 1.6rem;
-	height: 1.6rem;
-	margin-top: 0.1rem;
-	border-radius: 999px;
-	background: rgba(229, 9, 20, 0.15);
-	border: 1px solid rgba(229, 9, 20, 0.35);
-}
-.wu-benefit-list .wu-check svg {
-	width: 0.9rem;
-	height: 0.9rem;
-	color: #ff3366;
-}
-
-/* Hero enhancements */
-.wu-eyebrow {
-	display: inline-flex;
-	align-items: center;
 	gap: 0.5rem;
-	padding: 0.3rem 0.85rem;
-	border-radius: 999px;
-	background: rgba(229, 9, 20, 0.12);
-	border: 1px solid rgba(229, 9, 20, 0.3);
-	color: #ff5577 !important;
-	font-size: var(--sl-text-xs) !important;
-	font-weight: 700;
-	letter-spacing: 0.08em;
+}
+.wu-bootstrap-title {
+	font-size: 1rem;
+	font-weight: 600;
+	color: var(--color-bone-white);
+	margin: 0;
+}
+.wu-bootstrap-tag {
+	font-size: 0.68rem;
+	font-weight: 600;
 	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	padding: 0.2rem 0.55rem;
+	border-radius: var(--wu-radius-sm);
+	background: rgba(185, 151, 255, 0.12);
+	border: 1px solid rgba(185, 151, 255, 0.25);
+	color: var(--color-lavender-spark);
+}
+.wu-bootstrap-desc {
+	font-size: 0.85rem;
+	color: var(--color-mid-ash);
+	line-height: 1.5;
+	margin: 0;
 }

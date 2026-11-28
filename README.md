@@ -1,17 +1,20 @@
 <div align="center">
 
-# ⚡ winutil-MAX
+# ⚡ Winutil-MAX
 
 ### The Ultimate Windows Optimization, Automation & Tweaking Suite
 *(Stranger Things / Max Mayfield Edition)*
 
 <br/>
 
-<img src="assets/winutil_max_splash.jpg" alt="winutil-MAX - Running Up That Hill" width="360" style="border-radius: 14px; box-shadow: 0 8px 30px rgba(229, 9, 20, 0.55);" />
+<img src="assets/winutil_max_splash.jpg" alt="Winutil-MAX - Running Up That Hill" width="360" style="border-radius: 14px; box-shadow: 0 8px 30px rgba(229, 9, 20, 0.55);" />
 
 <br/><br/>
 
 <p align="center">
+  <a href="https://winutil.rinkurapria.dev/" target="_blank" rel="noopener">
+    <img alt="Documentation" src="https://img.shields.io/badge/Docs-winutil.rinkurapria.dev-b997ff?style=for-the-badge">
+  </a>
   <a href="https://github.com/R-Rinku/winutil-max/stargazers">
     <img alt="Stars" src="https://img.shields.io/github/stars/R-Rinku/winutil-max?style=for-the-badge&logo=github&color=ff007f&labelColor=111827">
   </a>
@@ -26,7 +29,7 @@
   </a>
 </p>
 
-> **Credit & Attribution:** **winutil-MAX** is an enhanced, customized edition of [Chris Titus Tech's WinUtil](https://github.com/ChrisTitusTech/winutil). All credit for the foundational WinUtil engine belongs to **Chris Titus** and the upstream community. This fork introduces custom automation tools, enterprise safeguards, and a complete Stranger Things (Max Mayfield) aesthetic.
+> **Credit & Attribution:** **Winutil-MAX** is built upon [Chris Titus Tech's WinUtil](https://github.com/ChrisTitusTech/winutil) ([official docs](https://winutil.christitus.com/)). We rely on upstream WinUtil maintainers for core engine improvements while adding MAX-exclusive utilities on top. Support Chris Titus at the [Official CTT Store](https://cttstore.com/products/windows-toolbox).
 
 ---
 
@@ -115,13 +118,24 @@ cd winutil-max
 
 ---
 
-## ⚠️ Disclaimer
+## ⚠️ Disclaimer & Dual-Boot BitLocker Warning
 
 Provided **as-is** without warranty. Review changes before applying them. Use Enterprise Mode when operating on production machines.
+
+> **BitLocker Recovery Key Warning:** Before enabling or modifying BitLocker policies (especially on **dual-boot** systems), always back up your BitLocker Recovery Key for **both** OS drives/devices (`manage-bde -protectors -get C:`) to prevent drive lockouts.
+
+---
+
+## 🤖 Automation, CI/CD & Dependency Bots
+
+- **Documentation Deployment**: Pushes to `docs/` on `main` automatically build and deploy the Astro/Starlight site to **[winutil.rinkurapria.dev](https://winutil.rinkurapria.dev)** via `.github/workflows/docs.yaml`.
+- **Automated Releases**: `winutil.ps1` is compiled and validated automatically by GitHub Actions — never commit `winutil.ps1` directly to `main`.
+- **Dependabot (`github-actions`)**: Dependabot monitors `.github/workflows/` and opens automated pull requests when official GitHub Actions (such as `astral-sh/setup-uv` or `actions/checkout`) release updates. Merge bot PRs only after CI checks pass.
 
 ---
 
 ## 👤 Credits & Links
 
+- **Official Documentation**: [winutil.rinkurapria.dev](https://winutil.rinkurapria.dev)
 - **Maintained by**: [Rinku Rapria](https://www.rinkurapria.dev/) ([@R-Rinku](https://github.com/R-Rinku))
-- **Original WinUtil**: [ChrisTitusTech/winutil](https://github.com/ChrisTitusTech/winutil)
+- **Upstream WinUtil**: [ChrisTitusTech/winutil](https://github.com/ChrisTitusTech/winutil) | [CTT Store](https://cttstore.com/products/windows-toolbox)

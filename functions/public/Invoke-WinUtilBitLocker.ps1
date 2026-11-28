@@ -11,6 +11,25 @@ function Invoke-WinUtilBitLockerPolicy {
     [CmdletBinding()]
     param()
 
+    Write-Warning "BitLocker & encryption changes can cause data lockout if recovery keys are missing. Back up recovery keys for ALL OS drives (both devices/OSes on dual-boot) before encrypting."
+
+    if (Test-WinUtilUIAlive) {
+        $warnMsg = "WARNING: BitLocker & Dual-Boot Safety Check`n`n" +
+                   "Modifying BitLocker or disk encryption policies can cause data loss or drive lockouts if a recovery key is lost.`n`n" +
+                   "BEFORE PROCEEDING:`n" +
+                   "1. Back up your BitLocker Recovery Key for BOTH Windows installations / drives if you are running Dual-Boot.`n" +
+                   "2. You can view existing recovery keys anytime in an Admin terminal with:`n" +
+                   "   manage-bde -protectors -get C:`n`n" +
+                   "Do you want to apply the BitLocker Startup Password (No-TPM) policy now?"
+
+        $confirm = Show-WinUtilMessage -Title "BitLocker Dual-Boot & Recovery Key Warning" -Message $warnMsg -Button "YesNo" -Icon "Warning"
+        if ("$confirm" -ne "Yes") {
+            Write-WinUtilLog -Level "INFO" -Component "BitLocker" -Message "User cancelled BitLocker Startup Password policy configuration."
+            Write-Host "[winutil-MAX] [INFO] BitLocker policy configuration cancelled by user." -ForegroundColor Yellow
+            return
+        }
+    }
+
     Write-WinUtilLog -Component "BitLocker" -Message "Configuring BitLocker Startup Password Policy (No-TPM / Dual-Boot Friendly)."
     Write-Host "[winutil-MAX] [$(Get-Date -Format 'HH:mm:ss')] >> Configuring BitLocker Startup Password policy..." -ForegroundColor Cyan
 

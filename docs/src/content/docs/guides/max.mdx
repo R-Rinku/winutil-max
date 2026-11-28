@@ -1,0 +1,62 @@
+---
+title: MAX Exclusive Utilities
+description: Guide to Winutil-MAX exclusive tools — Dual-Boot BitLocker without TPM, OneDrive Sync Exclusion, Bulk Name Modifier, Take Ownership, Profile Backups, and Desktop Shortcut.
+sidebar:
+  order: 8
+---
+
+The **MAX** tab brings together custom power-user utilities built specifically for **Winutil-MAX** to solve common Windows pain points around dual-boot encryption, OneDrive folder locking, bulk file operations, and full system backup/restore.
+
+---
+
+## Dual-Boot BitLocker Startup Password (No TPM)
+
+Configure Windows Group Policy (`HKLM:\SOFTWARE\Policies\Microsoft\FVE`) to allow BitLocker pre-boot **Startup Passwords** without requiring a hardware TPM (`EnableBDEWithNoTPM`, `UseAdvancedStartup`, `OSPassphrase`).
+
+:::danger[Back Up Recovery Keys for Both OS Drives First]
+Modifying BitLocker or disk encryption policies carries a risk of drive lockout if a recovery key is unavailable.
+
+- **Single-boot & Dual-boot users**: Always back up your BitLocker Recovery Key **before** enabling or changing encryption.
+- **Dual-boot systems**: Back up the BitLocker Recovery Key for **both** Windows installations / OS drives (for example, to a USB drive, Microsoft Account, or printed copy) so a TPM PCR change on one OS never locks you out of the other.
+- Inspect existing protectors in an elevated terminal with: `manage-bde -protectors -get C:`
+:::
+
+**Why use a Startup Password on Dual-Boot?**  
+When two Windows installations share one hardware TPM, updating the bootloader or firmware on one OS can invalidate TPM PCR measurements for the other, triggering BitLocker Recovery screens. Using a pre-boot Startup Password isolates each OS drive from TPM PCR conflicts.
+
+---
+
+## OneDrive Sync Exclusion Manager
+
+Prevents Microsoft OneDrive from syncing, uploading, or locking sensitive local directories (such as `node_modules`, `WindowsPowerShell`, build caches, or local project folders) while keeping all files accessible locally on disk.
+
+---
+
+## Smart Bulk Name Modifier
+
+Interactive batch file and folder renamer featuring:
+- Real-time rename preview before any disk write
+- Regular expression (`regex`) find-and-replace
+- Sequential numbering and prefix/suffix rules
+
+---
+
+## Take Ownership (Context Menu)
+
+Adds or removes **Take Full Ownership** in the Windows Explorer right-click menu with built-in safeguards protecting critical OS root directories.
+
+---
+
+## Winutil-MAX 2.0 Profile Backups
+
+Use **Settings (gear icon) → Export / Import** to back up and restore your complete setup in a single JSON file, including:
+- Selected applications (WinGet / Chocolatey)
+- Essential & Advanced tweaks
+- **Winutil-MAX Profile** (BitLocker policy, OneDrive exclusion rules, Take Ownership, and desktop shortcut)
+
+---
+
+## Desktop Shortcut & AI Developer Toolkits
+
+- **Desktop Shortcut (Create / Remove)**: Places a 1-click **Winutil-MAX** shortcut on your Desktop with the Max icon and execution-policy bypass.
+- **Claude Code CLI / OmniRoute**: Optional quick-install and launch helpers for terminal AI workflows.

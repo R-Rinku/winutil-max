@@ -1,23 +1,18 @@
 ---
-title: Documentation
-description: winutil-MAX — Windows Setup & Tweaks Utility with custom enhancements, smart backups, and Stranger Things theme.
+title: Winutil-MAX
+description: Open-source Windows setup, optimization & tweaking utility. Install apps via WinGet/Chocolatey, debloat Windows, enable dual-boot BitLocker without TPM, exclude OneDrive sync, and build custom ISOs.
 template: splash
 editUrl: false
-heroEyebrow: winutil-MAX Custom Edition
-heroCaption: Free. Open source. No installer, no telemetry, no bloat.
-heroBadges:
-  - src: https://img.shields.io/github/v/release/R-Rinku/winutil-max?color=%23FF0055&label=winutil-MAX&style=for-the-badge
-    alt: Latest release
-    href: https://github.com/R-Rinku/winutil-max/releases/latest
-  - src: https://img.shields.io/badge/Theme-Stranger%20Things-E50914?style=for-the-badge
-    alt: Theme
+heroEyebrow: Winutil-MAX • v2.0
+heroCaption: Run in PowerShell (Administrator). No installer, no telemetry, 100% reversible.
 hero:
-  title: Windows setup & optimization, without compromise
-  tagline: The modern community-driven powerhouse. Debloat, optimize, enable dual-boot BitLocker without TPM conflicts, exclude OneDrive sync, batch rename with regex, and automate fresh installs.
+  title: 'Windows Setup, <span class="wu-gradient-word">Engineered.</span>'
+  tagline: "Install apps via WinGet or Chocolatey, apply reversible privacy tweaks, configure dual-boot BitLocker without TPM conflicts, exclude OneDrive folders, and automate clean installs from one portable script."
   image:
     file: ../../assets/branding/title-screen.png
+    alt: "Winutil-MAX desktop interface in light and dark mode"
   actions:
-    - text: Explore Documentation
+    - text: Explore Docs
       link: /guides/
       icon: right-arrow
     - text: View on GitHub
@@ -25,14 +20,20 @@ hero:
       icon: external
       variant: secondary
 head:
+  - tag: title
+    content: Winutil-MAX
   - tag: meta
     attrs:
       property: og:title
-      content: Documentation | winutil-MAX
+      content: Winutil-MAX
   - tag: meta
     attrs:
       name: twitter:title
-      content: Documentation | winutil-MAX
+      content: Winutil-MAX
+  - tag: meta
+    attrs:
+      name: keywords
+      content: winutil-max, windows optimization, debloat windows 11, winget installer, bitlocker without tpm, onedrive exclude folder, powershell windows utility
   - tag: script
     attrs:
       type: application/ld+json
@@ -40,11 +41,11 @@ head:
       {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
-        "name": "winutil-MAX",
-        "description": "winutil-MAX — Windows Setup & Tweaks Utility with custom enhancements, smart backups, and Stranger Things theme.",
+        "name": "Winutil-MAX",
+        "description": "Open-source Windows setup, debloat, and automation suite with dual-boot BitLocker, OneDrive sync exclusion, bulk rename, and profile backup.",
         "url": "https://winutil.rinkurapria.dev",
         "downloadUrl": "https://github.com/R-Rinku/winutil-max",
-        "operatingSystem": "Windows",
+        "operatingSystem": "Windows 10, Windows 11",
         "applicationCategory": "UtilitiesApplication",
         "offers": {
           "@type": "Offer",
@@ -58,85 +59,99 @@ head:
       }
 ---
 
-import { Icon, Code } from '@astrojs/starlight/components';
+import { Icon } from '@astrojs/starlight/components';
 import BentoCard from '../../components/BentoCard.astro';
+import WorkspaceTabs from '../../components/WorkspaceTabs.astro';
 
-{/* Trust bar: Refero-style pill chips under hero */}
-<section class="wu-section wu-section--trust">
-	<div class="wu-trust-bar">
-		<span class="wu-trust-item"><Icon name="github" /> 100% Open Source</span>
-		<span class="wu-trust-item"><Icon name="rocket" /> Zero Installer / Portable</span>
-		<span class="wu-trust-item"><Icon name="shield" /> No Telemetry Added</span>
-		<span class="wu-trust-item"><Icon name="approve-check-circle" /> 100% Reversible</span>
-		<span class="wu-trust-item"><Icon name="laptop" /> Windows 11 & 10 Ready</span>
-	</div>
-</section>
-
-{/* Fast 1-Liner Quick Launch Box */}
-<section class="wu-section">
-	<div class="wu-section-inner wu-text-narrow" style="text-align: center;">
-		<span class="wu-eyebrow">Instant Launch</span>
-		<h2 style="font-size: var(--sl-text-3xl); font-weight: 800; margin: 0.75rem 0 0.5rem; color: #ffffff;">Launch Directly from PowerShell</h2>
-		<p style="color: var(--sl-color-gray-3); margin-bottom: 1.5rem;">Open Windows PowerShell (Admin) and run the one-line command below:</p>
-		
-		<div class="wu-cli-box">
-			<div class="wu-cli-cmd">
-				<span class="wu-cli-prompt">&gt;</span>
-				<span>irm "https://rinkurapria.dev/win" | iex</span>
-			</div>
-		</div>
-	</div>
-</section>
-
-{/* Refero Bento Grid Feature Showcase */}
-<section class="wu-section wu-section--tint">
+{/* ── Six Integrated Workspaces ── */}
+<section class="wu-section" aria-labelledby="tabs-heading">
 	<div class="wu-section-inner">
 		<div class="wu-section-head">
-			<span class="wu-eyebrow">Engineered for Power Users</span>
-			<h2>Everything Built for Precision & Reliability</h2>
-			<p>Explore exclusive WinUtil-MAX utilities designed to solve daily pain points that standard tools ignore.</p>
+			<span class="wu-eyebrow">Modular Workflow</span>
+			<h2 id="tabs-heading">Six Integrated Workspaces</h2>
+			<p>Explore every module inside the Winutil-MAX desktop interface.</p>
+		</div>
+
+		<WorkspaceTabs />
+	</div>
+</section>
+
+{/* ── Bento Grid: Exclusive MAX Tools ── */}
+<section class="wu-section wu-section--tint" aria-labelledby="max-heading">
+	<div class="wu-section-inner">
+		<div class="wu-section-head">
+			<span class="wu-eyebrow">MAX Exclusive</span>
+			<h2 id="max-heading">Built for Power Users</h2>
+			<p>Portable PowerShell automation paired with custom utilities engineered for daily Windows reliability.</p>
 		</div>
 
 		<div class="wu-bento-grid">
-			<BentoCard icon="shield" title="Dual-Boot BitLocker Without TPM" badge="Dual-Boot Safe" span="2">
-				Configure pre-boot startup passwords without requiring TPM. Essential for systems running dual-boot Windows installations where one OS already uses the TPM, preventing PCR sealing collisions and dreaded recovery key prompts.
+			<BentoCard icon="approve-check-circle" title="Dual-Boot BitLocker Without TPM" badge="Dual-Boot Safe" span="2">
+				Configure pre-boot startup passwords without requiring TPM. Essential for dual-boot Windows PCs where one OS already seals PCRs in TPM, preventing recovery key lockouts.
 			</BentoCard>
 
-			<BentoCard icon="document" title="Smart Bulk Name Modifier" badge="Power Utility">
-				Interactive batch file and folder renamer with real-time preview, sequence numbering, replace rules, and full regular expression support.
+			<BentoCard icon="document" title="Smart Bulk Name Modifier" badge="Regex">
+				Interactive batch file and folder renamer with real-time preview, sequential numbering, find/replace, and regular expression support.
 			</BentoCard>
 
-			<BentoCard icon="cloud-download" title="OneDrive Sync Exclusion Manager" badge="Developer Essential">
-				Stop OneDrive from silently syncing and locking directories like <code>WindowsPowerShell</code> or <code>node_modules</code>. Files remain safe, editable, and 100% local on your PC.
+			<BentoCard icon="cloud-download" title="OneDrive Sync Exclusion" badge="Dev Essential">
+				Block OneDrive from syncing or locking directories like <code>node_modules</code> or <code>WindowsPowerShell</code> while keeping files 100% local.
 			</BentoCard>
 
-			<BentoCard icon="setting" title="WinUtil-MAX 2.0 Full Backups" badge="Instant Restore">
-				Export your complete system profile. When reinstalling Windows, 1-click import restores all your apps, tweaks, BitLocker policies, and OneDrive exclusions in seconds.
+			<BentoCard icon="setting" title="Winutil-MAX 2.0 Backups" badge="1-Click Restore">
+				Export your entire profile &mdash; apps, tweaks, BitLocker policy, and OneDrive rules &mdash; and restore everything in seconds on a fresh Windows install.
 			</BentoCard>
 
-			<BentoCard icon="desktop" title="Custom Win11 ISO Creator" badge="Unattended">
-				Debloat and preconfigure official Windows 11 installation images with integrated driver injection and automated desktop shortcut placement on first logon.
+			<BentoCard icon="desktop" title="Unattended Win11 ISO + Shortcut" badge="Automated">
+				Create debloated Windows 11 media with DISM driver injection and automatic Winutil-MAX desktop shortcut creation on first logon.
 			</BentoCard>
 		</div>
 	</div>
 </section>
 
-{/* Upstream Attribution Banner */}
-<section class="wu-section">
-	<div class="wu-section-inner wu-text-narrow" style="text-align: center; border: 1px solid rgba(255, 51, 85, 0.2); background: rgba(229, 9, 20, 0.05); padding: 2.5rem; border-radius: 1rem;">
-		<span class="wu-eyebrow">Community & Upstream</span>
-		<h2 style="font-size: var(--sl-text-2xl); font-weight: 800; margin: 0.75rem 0; color: #ffffff;">Honoring Chris Titus Tech</h2>
-		<p style="color: var(--sl-color-gray-3); font-size: var(--sl-text-base); line-height: 1.6; max-width: 38rem; margin: 0 auto 1.5rem;">
-			WinUtil-MAX is built upon the foundational open-source architecture of the legendary Windows Utility created by Chris Titus Tech. Support his continued hard work and open-source contributions.
-		</p>
-		<div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
-			<a class="wu-btn wu-btn-primary" href="https://cttstore.com/products/windows-toolbox" target="_blank" rel="noreferrer">
-				<Icon name="external" />
-				Support Chris Titus (CTT Store)
-			</a>
-			<a class="wu-btn wu-btn-secondary" href="https://winutil.christitus.com/" target="_blank" rel="noreferrer">
-				Upstream Docs
-			</a>
+{/* ── Techy Split PowerShell Bootstrap ── */}
+<section id="bootstrap" class="wu-section" aria-labelledby="bootstrap-heading">
+	<div class="wu-section-inner">
+		<div class="wu-section-head">
+			<span class="wu-eyebrow">Terminal Launch</span>
+			<h2 id="bootstrap-heading">PowerShell Bootstrap</h2>
+			<p>Open <strong>PowerShell</strong> or <strong>Windows Terminal</strong> as Administrator and execute either endpoint:</p>
+		</div>
+
+		<div class="wu-bootstrap-grid">
+			<div class="wu-bootstrap-card">
+				<div class="wu-bootstrap-head">
+					<h3 class="wu-bootstrap-title">Shortlink Redirect</h3>
+					<span class="wu-bootstrap-tag">Primary</span>
+				</div>
+				<p class="wu-bootstrap-desc">Fastest entry point routed via <code>rinkurapria.dev</code> to the latest verified release script.</p>
+				<div class="wu-cli-box">
+					<div class="wu-cli-cmd">
+						<span class="wu-cli-prompt">PS&gt;</span>
+						<code>irm "https://rinkurapria.dev/win" | iex</code>
+					</div>
+					<button type="button" class="wu-cli-copy" data-copy-text='irm "https://rinkurapria.dev/win" | iex' aria-label="Copy shortlink PowerShell command">
+						<span class="wu-copy-label">Copy</span>
+					</button>
+				</div>
+			</div>
+
+			<div class="wu-bootstrap-card">
+				<div class="wu-bootstrap-head">
+					<h3 class="wu-bootstrap-title">GitHub Raw Origin</h3>
+					<span class="wu-bootstrap-tag">Direct Mirror</span>
+				</div>
+				<p class="wu-bootstrap-desc">Direct raw fetch from <code>R-Rinku/winutil-max</code> on GitHub if custom DNS or proxy rules block shortlinks.</p>
+				<div class="wu-cli-box">
+					<div class="wu-cli-cmd">
+						<span class="wu-cli-prompt">PS&gt;</span>
+						<code>irm "https://raw.githubusercontent.com/R-Rinku/winutil-max/main/winutil.ps1" | iex</code>
+					</div>
+					<button type="button" class="wu-cli-copy" data-copy-text='irm "https://raw.githubusercontent.com/R-Rinku/winutil-max/main/winutil.ps1" | iex' aria-label="Copy GitHub raw PowerShell command">
+						<span class="wu-copy-label">Copy</span>
+					</button>
+				</div>
+			</div>
 		</div>
 	</div>
 </section>

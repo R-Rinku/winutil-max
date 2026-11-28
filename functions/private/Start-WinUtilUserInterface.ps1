@@ -433,8 +433,9 @@ function Start-WinUtilUserInterface {
         Invoke-WPFPopup -Action "Hide" -Popups @("Settings")
 
         $authorInfo = @"
-WinUtil-Max: Enhanced Windows Utility Hub
-Maintainer : <a href="https://github.com/R-Rinku">@R-Rinku</a>
+Winutil-MAX: Enhanced Windows Utility Hub
+Maintainer : <a href="https://www.rinkurapria.dev">Rinku Rapria</a> (<a href="https://github.com/R-Rinku">@R-Rinku</a>)
+Docs Site  : <a href="https://winutil.rinkurapria.dev">winutil.rinkurapria.dev</a>
 GitHub     : <a href="https://github.com/R-Rinku/winutil-max">R-Rinku/winutil-max</a>
 Version    : <a href="https://github.com/R-Rinku/winutil-max/releases/tag/$($sync.version)">$($sync.version)</a>
 
@@ -444,11 +445,11 @@ Created by       : <a href="https://github.com/ChrisTitusTech">@ChrisTitusTech</
 Core Design/UI   : <a href="https://github.com/MyDrift-user">@MyDrift-user</a>, <a href="https://github.com/Marterich">@Marterich</a>
 Runspace Engine  : <a href="https://github.com/DeveloperDurp">@DeveloperDurp</a>, <a href="https://github.com/Marterich">@Marterich</a>
 "@
-        Show-CustomDialog -Title "About WinUtil-Max" -Message $authorInfo
+        Show-CustomDialog -Title "About Winutil-MAX" -Message $authorInfo
     })
     $sync["DocumentationMenuItem"].Add_Click({
         Invoke-WPFPopup -Action "Hide" -Popups @("Settings")
-        Start-Process "https://github.com/R-Rinku/winutil-max"
+        Start-Process "https://winutil.rinkurapria.dev"
     })
 
     # Font Scaling Event Handlers
