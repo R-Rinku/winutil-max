@@ -433,7 +433,7 @@ function Invoke-WPFUIElements {
                         }
                         [System.Windows.Automation.AutomationProperties]::SetName($button, $entryInfo.Content)
 
-                        if ($entryInfo.Link -or $entryInfo.Description) {
+                        if ($entryInfo.Link -and $targetGridName -ne "appnavigationpanel" -and $entryInfo.Category -notlike "*Actions*" -and $entryInfo.Category -notlike "*Selection*") {
                             $horizontalStackPanel = New-Object Windows.Controls.StackPanel
                             $horizontalStackPanel.Orientation = "Horizontal"
                             $horizontalStackPanel.Children.Add($button) | Out-Null
@@ -441,7 +441,7 @@ function Invoke-WPFUIElements {
                             $textBlock = New-Object Windows.Controls.TextBlock
                             $textBlock.Name = $button.Name + "Link"
                             $textBlock.Text = "(?)"
-                            $textBlock.ToolTip = if ($entryInfo.Description) { $entryInfo.Description } else { $entryInfo.Link }
+                            $textBlock.ToolTip = $entryInfo.Link
                             $textBlock.Style = $HoverTextBlockStyle
                             $textBlock.UseLayoutRounding = $true
                             $textBlock.VerticalAlignment = "Center"
@@ -449,12 +449,10 @@ function Invoke-WPFUIElements {
                             $textBlock.SetResourceReference([Windows.Controls.Control]::FontSizeProperty, "ButtonFontSize")
                             $textBlock.Cursor = [System.Windows.Input.Cursors]::Hand
 
-                            if ($entryInfo.Link) {
-                                $targetLink = $entryInfo.Link
-                                $textBlock.Add_MouseUp({
-                                    Start-Process $targetLink -ErrorAction SilentlyContinue
-                                })
-                            }
+                            $targetLink = $entryInfo.Link
+                            $textBlock.Add_MouseUp({
+                                Start-Process $targetLink -ErrorAction SilentlyContinue
+                            })
 
                             $horizontalStackPanel.Children.Add($textBlock) | Out-Null
                             $stackPanelContainer.Children.Add($horizontalStackPanel) | Out-Null

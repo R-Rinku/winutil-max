@@ -49,9 +49,29 @@
     "function": "Invoke-WinUtilSuperGodMode",
     "link": "https://github.com/ThioJoe/Windows-Super-God-Mode"
   },
+  "WPFMaxDesktopShortcut": {
+    "Content": "Desktop Shortcut (Create / Update)",
+    "Description": "Creates or updates a permanent 1-click desktop shortcut for WinUtil-MAX with the Max Mayfield photo icon, launching from GitHub with execution policy bypass.",
+    "category": "Power Utilities",
+    "panel": "0",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "function": "Invoke-WinUtilDesktopShortcut",
+    "link": "https://github.com/R-Rinku/winutil-max"
+  },
+  "WPFMaxDesktopShortcutRemove": {
+    "Content": "Desktop Shortcut (Remove)",
+    "Description": "Removes the WinUtil-MAX desktop shortcut and cleans up cached icon files.",
+    "category": "Power Utilities",
+    "panel": "0",
+    "Type": "Button",
+    "ButtonWidth": "300",
+    "function": "Invoke-WinUtilDesktopShortcut -Remove",
+    "link": "https://github.com/R-Rinku/winutil-max"
+  },
   "WPFMaxBitLockerPolicy": {
-    "Content": "BitLocker Startup PIN Policy - Enable",
-    "Description": "Enables Group Policy to allow BitLocker pre-boot Startup PIN on TPM-enabled machines and devices without TPM.",
+    "Content": "BitLocker Startup Password Policy (No TPM / Dual Boot)",
+    "Description": "Enables Group Policy to allow BitLocker pre-boot Startup Password without requiring TPM. Essential for dual-boot systems where another OS uses the TPM, preventing PCR conflicts.",
     "category": "Security",
     "panel": "1",
     "Type": "Button",

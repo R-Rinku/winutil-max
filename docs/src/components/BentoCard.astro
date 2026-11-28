@@ -1,0 +1,116 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+import type { ComponentProps } from 'astro/types';
+
+interface Props {
+	icon: ComponentProps<typeof Icon>['name'];
+	title: string;
+	badge?: string;
+	span?: '1' | '2';
+}
+
+const { icon, title, badge, span = '1' } = Astro.props;
+---
+
+<div class:list={['wu-bento-card', span === '2' && 'wu-bento-card--wide']}>
+	<div class="wu-bento-glow" aria-hidden="true"></div>
+	<div class="wu-bento-top">
+		<div class="wu-bento-icon">
+			<Icon name={icon} size="1.4rem" />
+		</div>
+		{badge && <span class="wu-bento-tag">{badge}</span>}
+	</div>
+	<h3><slot name="title">{title}</slot></h3>
+	<div class="wu-bento-desc"><slot /></div>
+</div>
+
+<style>
+	.wu-bento-card {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+		padding: 1.75rem;
+		border-radius: 1rem;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		background: linear-gradient(180deg, rgba(24, 24, 32, 0.75) 0%, rgba(14, 14, 18, 0.85) 100%);
+		backdrop-filter: blur(16px);
+		-webkit-backdrop-filter: blur(16px);
+		overflow: hidden;
+		transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+	}
+
+	.wu-bento-card--wide {
+		grid-column: span 1;
+	}
+
+	@media (min-width: 50rem) {
+		.wu-bento-card--wide {
+			grid-column: span 2;
+		}
+	}
+
+	.wu-bento-card:hover {
+		border-color: rgba(229, 9, 20, 0.45);
+		box-shadow: 0 12px 35px -8px rgba(229, 9, 20, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+		transform: translateY(-2px);
+	}
+
+	.wu-bento-glow {
+		position: absolute;
+		top: 0;
+		right: 0;
+		width: 140px;
+		height: 140px;
+		background: radial-gradient(circle, rgba(229, 9, 20, 0.15) 0%, transparent 70%);
+		pointer-events: none;
+	}
+
+	.wu-bento-top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.wu-bento-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.75rem;
+		height: 2.75rem;
+		border-radius: 0.75rem;
+		background: rgba(229, 9, 20, 0.12);
+		border: 1px solid rgba(229, 9, 20, 0.25);
+		color: #ff3366;
+	}
+
+	.wu-bento-tag {
+		font-size: 0.7rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		padding: 0.25rem 0.65rem;
+		border-radius: 999px;
+		background: rgba(255, 51, 85, 0.15);
+		border: 1px solid rgba(255, 51, 85, 0.3);
+		color: #ff6688;
+	}
+
+	.wu-bento-card h3 {
+		margin: 0;
+		font-size: var(--sl-text-xl);
+		font-weight: 700;
+		color: #ffffff;
+		letter-spacing: -0.01em;
+	}
+
+	.wu-bento-desc {
+		font-size: var(--sl-text-sm);
+		line-height: 1.6;
+		color: #a1a1aa;
+	}
+
+	.wu-bento-desc :global(p) {
+		margin: 0;
+	}
+</style>

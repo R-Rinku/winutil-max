@@ -417,6 +417,14 @@ function Start-WinUtilUserInterface {
         Invoke-WPFPopup -Action "Hide" -Popups @("Settings")
         Invoke-WPFImpex -type "export"
     })
+    $sync["CreateDesktopShortcutMenuItem"].Add_Click({
+        Invoke-WPFPopup -Action "Hide" -Popups @("Settings")
+        Invoke-WinUtilDesktopShortcut
+    })
+    $sync["RemoveDesktopShortcutMenuItem"].Add_Click({
+        Invoke-WPFPopup -Action "Hide" -Popups @("Settings")
+        Invoke-WinUtilDesktopShortcut -Remove
+    })
     $sync["ExportEnvironmentReportMenuItem"].Add_Click({
         Invoke-WPFPopup -Action "Hide" -Popups @("Settings")
         Invoke-WPFExportEnvironmentReport

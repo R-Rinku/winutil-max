@@ -464,6 +464,7 @@ Describe "XAML and sync wiring" {
             "selectedTweaks",
             "selectedToggles",
             "selectedFeatures",
+            "selectedMax",
             "currentTab",
             "selectedAppsStackPanel",
             "selectedAppsstackPanel",

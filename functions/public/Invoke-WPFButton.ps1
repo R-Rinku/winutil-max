@@ -36,7 +36,8 @@ function Invoke-WPFButton {
         "WPFUpdatesdefault", "WPFUpdatesdisable", "WPFUpdatessecurity",
         "WPFGetInstalledAppx", "WPFMaxTurboClean", "WPFMaxSystemRepair",
         "WPFMaxInstallClaude", "WPFMaxInstallOmniRoute",
-        "WPFMaxBitLockerPolicy", "WPFMaxBitLockerStatus"
+        "WPFMaxBitLockerPolicy", "WPFMaxBitLockerStatus", "WPFMaxDesktopShortcut",
+        "WPFMaxDesktopShortcutRemove"
     )
 
     $featureEntry = $sync.configs.feature.$Button
@@ -262,6 +263,8 @@ function Invoke-WPFButtonAction {
         "WPFMaxTakeOwnershipRemove" { Invoke-WPFTakeOwnershipRemove }
         "WPFMaxSuperGodMode" { Invoke-WinUtilSuperGodMode }
         "WPFMaxBitLockerPolicy" { Invoke-WinUtilBitLockerPolicy }
+        "WPFMaxDesktopShortcut" { Invoke-WinUtilDesktopShortcut }
+        "WPFMaxDesktopShortcutRemove" { Invoke-WinUtilDesktopShortcut -Remove }
         "WPFMaxInstallClaude" { Invoke-WinUtilInstallClaudeCLI }
         "WPFMaxInstallOmniRoute" { Invoke-WinUtilInstallOmniRoute }
     }

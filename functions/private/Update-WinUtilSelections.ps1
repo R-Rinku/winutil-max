@@ -14,6 +14,7 @@ function Update-WinUtilSelections {
         selectedToggles  = [System.Collections.Generic.List[string]]::new()
         selectedFeatures = [System.Collections.Generic.List[string]]::new()
         selectedAppx     = [System.Collections.Generic.List[string]]::new()
+        selectedMax      = [System.Collections.Generic.List[string]]::new()
     }
 
     foreach ($cbkey in $flatJson) {
@@ -24,6 +25,7 @@ function Update-WinUtilSelections {
             '^WPFToggle'  { 'selectedToggles' }
             '^WPFFeature' { 'selectedFeatures' }
             '^WPFAppx'    { 'selectedAppx' }
+            '^WPFMax'     { 'selectedMax' }
         }
 
         if (-not $listName) {
@@ -49,6 +51,10 @@ function Update-WinUtilSelections {
             }
             'selectedAppx' {
                 $sync.configs.appxHashtable.ContainsKey($cbkey)
+            }
+            'selectedMax' {
+                ($null -ne $sync.configs.max -and $null -ne $sync.configs.max.PSObject.Properties[$cbkey]) -or
+                $cbkey -match '^WPFMax'
             }
         }
 
@@ -76,6 +82,9 @@ function Update-WinUtilSelections {
     }
 
     foreach ($listName in $nextSelections.Keys) {
+        if (-not $sync[$listName]) {
+            $sync[$listName] = [System.Collections.Generic.List[string]]::new()
+        }
         foreach ($cbkey in $nextSelections[$listName]) {
             # Appending, so the same entry can already be there: a preset and a config that both
             # name it would otherwise select it twice

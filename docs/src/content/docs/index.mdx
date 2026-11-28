@@ -6,18 +6,18 @@ editUrl: false
 heroEyebrow: winutil-MAX Custom Edition
 heroCaption: Free. Open source. No installer, no telemetry, no bloat.
 heroBadges:
-  - src: https://img.shields.io/github/v/release/R-Rinku/winutil-max?color=%23FF007F&label=winutil-MAX&style=for-the-badge
+  - src: https://img.shields.io/github/v/release/R-Rinku/winutil-max?color=%23FF0055&label=winutil-MAX&style=for-the-badge
     alt: Latest release
     href: https://github.com/R-Rinku/winutil-max/releases/latest
-  - src: https://img.shields.io/badge/Style-Stranger%20Things-E50914?style=for-the-badge
+  - src: https://img.shields.io/badge/Theme-Stranger%20Things-E50914?style=for-the-badge
     alt: Theme
 hero:
-  title: Set up Windows the way you actually want it
-  tagline: Install apps, apply tweaks, run fixes, and manage Windows updates — all from one script, one window, with smart fallback.
+  title: Windows setup & optimization, without compromise
+  tagline: The modern community-driven powerhouse. Debloat, optimize, enable dual-boot BitLocker without TPM conflicts, exclude OneDrive sync, batch rename with regex, and automate fresh installs.
   image:
     file: ../../assets/branding/title-screen.png
   actions:
-    - text: Get Started
+    - text: Explore Documentation
       link: /guides/
       icon: right-arrow
     - text: View on GitHub
@@ -42,7 +42,7 @@ head:
         "@type": "SoftwareApplication",
         "name": "winutil-MAX",
         "description": "winutil-MAX — Windows Setup & Tweaks Utility with custom enhancements, smart backups, and Stranger Things theme.",
-        "url": "https://rinkurapria.dev/win",
+        "url": "https://winutil.rinkurapria.dev",
         "downloadUrl": "https://github.com/R-Rinku/winutil-max",
         "operatingSystem": "Windows",
         "applicationCategory": "UtilitiesApplication",
@@ -59,170 +59,84 @@ head:
 ---
 
 import { Icon, Code } from '@astrojs/starlight/components';
-import CornerCard from '../../components/CornerCard.astro';
+import BentoCard from '../../components/BentoCard.astro';
 
-{/* Trust bar: icon + label chips under the hero. */}
+{/* Trust bar: Refero-style pill chips under hero */}
 <section class="wu-section wu-section--trust">
 	<div class="wu-trust-bar">
-		<span class="wu-trust-item"><Icon name="github" /> Open source</span>
-		<span class="wu-trust-item"><Icon name="download" /> No installer</span>
-		<span class="wu-trust-item"><Icon name="padlock" /> No telemetry added</span>
-		<span class="wu-trust-item"><Icon name="approve-check-circle" /> Everything reversible</span>
-		<span class="wu-trust-item"><Icon name="desktop" /> Windows 11 ready</span>
+		<span class="wu-trust-item"><Icon name="github" /> 100% Open Source</span>
+		<span class="wu-trust-item"><Icon name="rocket" /> Zero Installer / Portable</span>
+		<span class="wu-trust-item"><Icon name="shield" /> No Telemetry Added</span>
+		<span class="wu-trust-item"><Icon name="approve-check-circle" /> 100% Reversible</span>
+		<span class="wu-trust-item"><Icon name="laptop" /> Windows 11 & 10 Ready</span>
 	</div>
 </section>
 
-{/* Problem section: pain points WinUtil solves. */}
-<section class="wu-section wu-section--tint">
-	<div class="wu-section-inner wu-text-narrow">
-		<div class="wu-section-head wu-align-left">
-			<h2>Windows setup is easy to start and tedious to finish</h2>
-			<p>A fresh install works fine out of the box. Getting it configured the way you actually want takes an afternoon of registry edits, forum posts, and forgotten steps.</p>
-		</div>
-		<ul class="wu-problem-list">
-			<li><span class="wu-bullet"><Icon name="warning" /></span> Essential apps mean a dozen separate installers, each with its own bundled toolbar to decline.</li>
-			<li><span class="wu-bullet"><Icon name="warning" /></span> Privacy and telemetry settings are scattered across half a dozen different settings panels.</li>
-			<li><span class="wu-bullet"><Icon name="warning" /></span> The tweaks worth applying live in year-old forum threads, mixed in with outdated or risky advice.</li>
-			<li><span class="wu-bullet"><Icon name="warning" /></span> Undoing a tweak means remembering exactly what you changed and how.</li>
-			<li><span class="wu-bullet"><Icon name="warning" /></span> Doing it all again on the next machine means starting from zero.</li>
-		</ul>
-	</div>
-</section>
-
-{/* Solution grid: how WinUtil addresses each problem above. */}
+{/* Fast 1-Liner Quick Launch Box */}
 <section class="wu-section">
-	<div class="wu-section-inner">
-		<div class="wu-section-head">
-			<h2>WinUtil puts a real control panel on top of Windows</h2>
-			<p>Instead of stitching together installers, registry hacks, and forum wisdom, you manage the whole setup from one window.</p>
-		</div>
-		<div class="wu-solution-grid">
-			<div class="wu-solution">
-				<div class="wu-solution-icon"><Icon name="download" /></div>
-				<h3>Install without the bloat</h3>
-				<p>WinGet and Chocolatey install clean builds of your everyday apps, with no bundled toolbars or bundled offers.</p>
-			</div>
-			<div class="wu-solution">
-				<div class="wu-solution-icon"><Icon name="setting" /></div>
-				<h3>Tweak with a checkbox</h3>
-				<p>Essential and advanced tweaks for privacy, performance, and UI behavior are one click away, grouped by what they actually do.</p>
-			</div>
-			<div class="wu-solution">
-				<div class="wu-solution-icon"><Icon name="approve-check-circle" /></div>
-				<h3>Undo what you don't like</h3>
-				<p>Nearly every tweak can be reverted from the same panel, so trying something risky doesn't mean a full reinstall.</p>
-			</div>
-			<div class="wu-solution">
-				<div class="wu-solution-icon"><Icon name="server" /></div>
-				<h3>Fix what's broken</h3>
-				<p>One-click repairs for networking, Windows Update, and WinGet handle the fixes people usually paste from a forum thread.</p>
-			</div>
-			<div class="wu-solution">
-				<div class="wu-solution-icon"><Icon name="cloud-download" /></div>
-				<h3>Manage updates your way</h3>
-				<p>Switch between full updates, security-only updates, or fully paused — and back again — without digging through Group Policy.</p>
-			</div>
-			<div class="wu-solution">
-				<div class="wu-solution-icon"><Icon name="desktop" /></div>
-				<h3>Build your own ISO</h3>
-				<p>Win11 Creator debloats and preconfigures an official Microsoft image, so new installs start from your baseline.</p>
+	<div class="wu-section-inner wu-text-narrow" style="text-align: center;">
+		<span class="wu-eyebrow">Instant Launch</span>
+		<h2 style="font-size: var(--sl-text-3xl); font-weight: 800; margin: 0.75rem 0 0.5rem; color: #ffffff;">Launch Directly from PowerShell</h2>
+		<p style="color: var(--sl-color-gray-3); margin-bottom: 1.5rem;">Open Windows PowerShell (Admin) and run the one-line command below:</p>
+		
+		<div class="wu-cli-box">
+			<div class="wu-cli-cmd">
+				<span class="wu-cli-prompt">&gt;</span>
+				<span>irm "https://rinkurapria.dev/win" | iex</span>
 			</div>
 		</div>
 	</div>
 </section>
 
-{/* Feature grid: CornerCard highlights. */}
+{/* Refero Bento Grid Feature Showcase */}
 <section class="wu-section wu-section--tint">
 	<div class="wu-section-inner">
 		<div class="wu-section-head">
-			<h2>Everything you need to set up a machine, once</h2>
+			<span class="wu-eyebrow">Engineered for Power Users</span>
+			<h2>Everything Built for Precision & Reliability</h2>
+			<p>Explore exclusive WinUtil-MAX utilities designed to solve daily pain points that standard tools ignore.</p>
 		</div>
-		<div class="wu-feature-grid">
-			<CornerCard icon="padlock" title="Nothing phones home">
-				WinUtil doesn't collect or transmit anything. It's a script that runs, makes the changes you selected, and exits.
-			</CornerCard>
-			<CornerCard icon="approve-check-circle" title="Reversible by default">
-				Tweaks are applied through documented, undoable actions instead of one-way registry edits.
-			</CornerCard>
-			<CornerCard icon="setting" title="Grouped presets">
-				Minimal, Standard, and Advanced presets give you a sane starting point instead of picking through every tweak individually.
-			</CornerCard>
-			<CornerCard icon="cloud-download" title="WinGet & Chocolatey">
-				Application installs go through package managers you can audit, not opaque bundled installers.
-			</CornerCard>
-			<CornerCard icon="server" title="Automation-friendly">
-				Drive WinUtil unattended with config files and parameters for repeatable rollouts across machines.
-			</CornerCard>
-			<CornerCard icon="desktop" title="Custom Win11 ISOs">
-				Debloat and preconfigure a Windows 11 image before it's ever installed.
-			</CornerCard>
+
+		<div class="wu-bento-grid">
+			<BentoCard icon="shield" title="Dual-Boot BitLocker Without TPM" badge="Dual-Boot Safe" span="2">
+				Configure pre-boot startup passwords without requiring TPM. Essential for systems running dual-boot Windows installations where one OS already uses the TPM, preventing PCR sealing collisions and dreaded recovery key prompts.
+			</BentoCard>
+
+			<BentoCard icon="document" title="Smart Bulk Name Modifier" badge="Power Utility">
+				Interactive batch file and folder renamer with real-time preview, sequence numbering, replace rules, and full regular expression support.
+			</BentoCard>
+
+			<BentoCard icon="cloud-download" title="OneDrive Sync Exclusion Manager" badge="Developer Essential">
+				Stop OneDrive from silently syncing and locking directories like <code>WindowsPowerShell</code> or <code>node_modules</code>. Files remain safe, editable, and 100% local on your PC.
+			</BentoCard>
+
+			<BentoCard icon="setting" title="WinUtil-MAX 2.0 Full Backups" badge="Instant Restore">
+				Export your complete system profile. When reinstalling Windows, 1-click import restores all your apps, tweaks, BitLocker policies, and OneDrive exclusions in seconds.
+			</BentoCard>
+
+			<BentoCard icon="desktop" title="Custom Win11 ISO Creator" badge="Unattended">
+				Debloat and preconfigure official Windows 11 installation images with integrated driver injection and automated desktop shortcut placement on first logon.
+			</BentoCard>
 		</div>
 	</div>
 </section>
 
-{/* Step timeline: quick-start walkthrough + secondary CTA. */}
+{/* Upstream Attribution Banner */}
 <section class="wu-section">
-	<div class="wu-section-inner">
-		<div class="wu-section-head">
-			<h2>From a blank terminal to a configured PC</h2>
-		</div>
-		<div class="wu-timeline">
-			<div class="wu-timeline-step">
-				<span class="wu-timeline-number">1</span>
-				<h3>Open PowerShell as Administrator</h3>
-				<p>Right-click the Start button and choose Terminal (Admin), or launch PowerShell and elevate manually.</p>
-			</div>
-			<div class="wu-timeline-step">
-				<span class="wu-timeline-number">2</span>
-				<h3>Run the launch command</h3>
-				<p>Downloads and starts the latest release.</p>
-				<Code code={'irm "https://christitus.com/win" | iex'} lang="powershell" />
-			</div>
-			<div class="wu-timeline-step">
-				<span class="wu-timeline-number">3</span>
-				<h3>Install, tweak, fix, update</h3>
-				<p>Work through the Install, Tweaks, Config, and Updates tabs — everything is undoable.</p>
-			</div>
-		</div>
-		<div class="wu-cta" style="margin-top: 3rem;">
-			<a class="wu-btn wu-btn-secondary" href="/guides/">
-				{'Read the Docs'}
-				<Icon name="right-arrow" size="1.5em" class="wu-icon-arrow" />
+	<div class="wu-section-inner wu-text-narrow" style="text-align: center; border: 1px solid rgba(255, 51, 85, 0.2); background: rgba(229, 9, 20, 0.05); padding: 2.5rem; border-radius: 1rem;">
+		<span class="wu-eyebrow">Community & Upstream</span>
+		<h2 style="font-size: var(--sl-text-2xl); font-weight: 800; margin: 0.75rem 0; color: #ffffff;">Honoring Chris Titus Tech</h2>
+		<p style="color: var(--sl-color-gray-3); font-size: var(--sl-text-base); line-height: 1.6; max-width: 38rem; margin: 0 auto 1.5rem;">
+			WinUtil-MAX is built upon the foundational open-source architecture of the legendary Windows Utility created by Chris Titus Tech. Support his continued hard work and open-source contributions.
+		</p>
+		<div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+			<a class="wu-btn wu-btn-primary" href="https://cttstore.com/products/windows-toolbox" target="_blank" rel="noreferrer">
+				<Icon name="external" />
+				Support Chris Titus (CTT Store)
+			</a>
+			<a class="wu-btn wu-btn-secondary" href="https://winutil.christitus.com/" target="_blank" rel="noreferrer">
+				Upstream Docs
 			</a>
 		</div>
-	</div>
-</section>
-
-{/* Benefit checklist. */}
-<section class="wu-section wu-section--tint">
-	<div class="wu-section-inner wu-text-narrow">
-		<div class="wu-section-head wu-align-left">
-			<h2>Built for the gap between a fresh install and a finished machine</h2>
-			<p>Registry edits and PowerShell one-liners work. WinUtil makes them repeatable.</p>
-		</div>
-		<ul class="wu-benefit-list">
-			<li><span class="wu-check"><Icon name="approve-check" /></span> You keep full control — every tweak is visible, documented, and reversible.</li>
-			<li><span class="wu-check"><Icon name="approve-check" /></span> You gain a single interface for installs, tweaks, fixes, and updates instead of five different tools.</li>
-			<li><span class="wu-check"><Icon name="approve-check" /></span> You avoid the bundled toolbars and bloat that come with most software installers.</li>
-		</ul>
-	</div>
-</section>
-
-{/* Final CTA. */}
-<section class="wu-section">
-	<div class="wu-section-inner wu-text-narrow wu-cta">
-		<h2>Stop hunting for the same fixes every time</h2>
-		<p>Get a script that installs, tweaks, fixes, and updates Windows from one window.</p>
-		<div class="wu-btn-row">
-			<a class="wu-btn wu-btn-primary" href="/guides/">
-				{'Get Started'}
-				<Icon name="right-arrow" size="1.5em" class="wu-icon-arrow" />
-			</a>
-			<a class="wu-btn wu-btn-secondary" href="https://github.com/R-Rinku/winutil-max">
-				<Icon name="github" />
-				{' View on GitHub'}
-			</a>
-		</div>
-		<p class="wu-cta-footnote">Free and open source. No installer, no telemetry, no account required.</p>
 	</div>
 </section>

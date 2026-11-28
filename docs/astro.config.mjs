@@ -5,7 +5,7 @@ import { siteLinks } from './src/site-links.ts';
 
 // https://astro.build/config
 export default defineConfig({
-	site: 'https://rinkurapria.dev/win',
+	site: 'https://winutil.rinkurapria.dev',
 	integrations: [
 		starlight({
 			title: 'winutil-MAX',

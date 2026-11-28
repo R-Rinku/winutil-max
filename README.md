@@ -7,7 +7,7 @@
 
 <br/>
 
-<img src="MAX.jpg" alt="winutil-MAX - Running Up That Hill" width="300" style="border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 0, 127, 0.45);" />
+<img src="assets/winutil_max_splash.jpg" alt="winutil-MAX - Running Up That Hill" width="360" style="border-radius: 14px; box-shadow: 0 8px 30px rgba(229, 9, 20, 0.55);" />
 
 <br/><br/>
 
@@ -56,10 +56,11 @@ irm https://raw.githubusercontent.com/R-Rinku/winutil-max/main/winutil.ps1 | iex
 
 * **🚀 MAX Tab**:
   * **🏷️ Smart Bulk Name Modifier**: Interactive bulk file & folder renaming utility with instant before-and-after live preview, regex, and numbering.
+  * **📂 OneDrive Sync Exclusion Manager**: Exclude developer folders (`node_modules`, `.git`, `dist`, `build`, caches) and file patterns from OneDrive cloud sync while keeping them intact locally.
   * **🔑 Take Full Ownership**: One-click integration to add or remove *"Take Full Ownership"* in the Explorer context menu with system directory safeguards (scripts organized in `scripts/take-ownership/`).
-  * **🔒 BitLocker with Startup PIN**: Enable Startup PIN Group Policies for TPM & non-TPM machines, interactive PIN setup, and drive encryption status inspector.
+  * **🔒 BitLocker Startup Password (No TPM / Dual-Boot Safe)**: Enables Group Policy for pre-boot Startup Passwords without requiring TPM. Essential for dual-boot systems where another Windows installation already utilizes the TPM, eliminating PCR conflicts and recovery key lockouts.
   * **🤖 AI & Developer Toolkits**: 1-click install & launcher for Claude Code CLI and OmniRoute AI Gateway.
-  * **⚡ MAX Turbo & Maintenance**: Quick DNS/RAM/Temp clean, Windows God Mode desktop tool, Ultimate Performance power plan, and DISM/SFC system repair.
+  * **⚡ MAX Turbo & Maintenance**: Quick DNS/RAM/Temp clean, Windows Super God Mode desktop tool, Ultimate Performance power plan, and DISM/SFC system repair.
 
 * **🛡️ Enterprise Mode Safety Preset**:
   * Dedicated enterprise profile locking down risky tweaks (blocks bulk AppX removal, prevents Windows Update service tampering, and safeguards system components).
@@ -90,12 +91,27 @@ Run directly without the GUI to automate setup:
 git clone https://github.com/R-Rinku/winutil-max.git
 cd winutil-max
 
-# Compile and launch
-.\Run.ps1
+# Compile and launch GUI
+.\Compile.ps1 -Run
 
 # Or compile only
-.\Run.ps1 -CompileOnly
+.\Compile.ps1
 ```
+
+---
+
+## 🔍 Features, Search Index & Capabilities
+
+| Capability | Category | Details & SEO Keywords |
+| :--- | :--- | :--- |
+| **BitLocker without TPM** | Security & Dual-Boot | Pre-boot startup password (`manage-bde -pw`), dual-boot Windows safe, no TPM PCR sealing conflicts, bypass TPM requirement. |
+| **OneDrive Sync Exclusion** | Storage & Dev | Exclude specific directories (`node_modules`, `.venv`, `.git`, temporary builds) from OneDrive sync while keeping local files. |
+| **Smart Bulk Renamer** | Power Utilities | Batch file rename, directory clean, regex pattern matching, sequence numbering, live preview before commit. |
+| **Take Full Ownership** | System Administration | Windows Explorer context menu right-click integration, recursive ownership takeover with system file safeguards. |
+| **Super God Mode** | Windows Shell | Direct shortcuts to 1000+ deep Windows settings, hidden applets, control panel GUIDs, god mode links. |
+| **AI Toolkit** | Developer Tools | Anthropic Claude Code terminal assistant, OmniRoute AI router gateway, one-click launcher. |
+| **Windows Debloat & Privacy**| Performance & Tweaks | Disable telemetry, Cortana, Recall, Edge background processes, OneDrive uninstall, Windows Search indexing toggle. |
+| **Ultimate Performance Plan**| Gaming & Latency | Unlock hidden Windows Ultimate Performance power profile for low input latency and maximum CPU responsiveness. |
 
 ---
 

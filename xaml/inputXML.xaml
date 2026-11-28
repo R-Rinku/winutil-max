@@ -1235,6 +1235,17 @@
                                 </MenuItem.ToolTip>
                             </MenuItem>
                             <Separator/>
+                            <MenuItem FontSize="{DynamicResource ButtonFontSize}" Header="Create Desktop Shortcut" Name="CreateDesktopShortcutMenuItem" Foreground="{DynamicResource MainForegroundColor}">
+                                <MenuItem.ToolTip>
+                                    <ToolTip Content="Creates or updates a 1-click desktop shortcut for WinUtil-MAX with the Max icon."/>
+                                </MenuItem.ToolTip>
+                            </MenuItem>
+                            <MenuItem FontSize="{DynamicResource ButtonFontSize}" Header="Remove Desktop Shortcut" Name="RemoveDesktopShortcutMenuItem" Foreground="{DynamicResource MainForegroundColor}">
+                                <MenuItem.ToolTip>
+                                    <ToolTip Content="Removes the WinUtil-MAX shortcut from your desktop."/>
+                                </MenuItem.ToolTip>
+                            </MenuItem>
+                            <Separator/>
                             <MenuItem FontSize="{DynamicResource ButtonFontSize}" Header="Export Environment Report" Name="ExportEnvironmentReportMenuItem" Foreground="{DynamicResource MainForegroundColor}">
                                 <MenuItem.ToolTip>
                                     <ToolTip Content="Export a read-only diagnostics report for troubleshooting."/>

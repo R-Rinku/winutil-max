@@ -6,8 +6,8 @@ function Show-WinUtilMaxSplash {
         Add-Type -AssemblyName PresentationFramework -ErrorAction SilentlyContinue
         Add-Type -AssemblyName WindowsBase -ErrorAction SilentlyContinue
         $image = $null
-        $localCandidates = @((Join-Path (Get-Location).Path 'MAX.jpg'))
-        if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) { $localCandidates = @((Join-Path $PSScriptRoot '..\..\MAX.jpg')) + $localCandidates }
+        $localCandidates = @((Join-Path (Get-Location).Path 'assets\MAX.jpg'), (Join-Path (Get-Location).Path 'MAX.jpg'))
+        if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) { $localCandidates = @((Join-Path $PSScriptRoot '..\..\assets\MAX.jpg'), (Join-Path $PSScriptRoot '..\..\MAX.jpg')) + $localCandidates }
         foreach ($candidate in $localCandidates) {
             if (-not [string]::IsNullOrWhiteSpace($candidate) -and (Test-Path -LiteralPath $candidate -ErrorAction SilentlyContinue)) {
                 try {
